@@ -190,12 +190,44 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hira
 
 .receipt-void-banner{background:var(--danger-light);color:var(--danger);text-align:center;padding:6px;border-radius:4px;font-weight:700;margin-bottom:10px;font-size:13px}
 
+.recon-panel{background:var(--card);border-radius:var(--radius);padding:18px 20px;margin-bottom:16px;box-shadow:var(--shadow)}
+.recon-panel-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}
+.recon-panel-header h3{font-size:15px;font-weight:700;display:flex;align-items:center;gap:8px}
+.recon-panel-header h3::before{content:"";display:inline-block;width:4px;height:16px;background:var(--primary);border-radius:2px}
+.recon-panel-header .recon-date{font-size:13px;color:var(--text-secondary)}
+.recon-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px;margin-bottom:14px}
+.recon-card{padding:14px;border-radius:8px;border:2px solid var(--border);text-align:center;transition:all .2s}
+.recon-card:hover{box-shadow:var(--shadow)}
+.recon-card .recon-label{font-size:12px;color:var(--text-secondary);margin-bottom:4px}
+.recon-card .recon-count{font-size:20px;font-weight:700;color:var(--text)}
+.recon-card .recon-amount{font-size:14px;font-weight:600;color:var(--danger);margin-top:2px}
+.recon-card .recon-amount .yen{font-size:11px}
+.recon-card.cash{border-color:var(--success);background:var(--success-light)}
+.recon-card.cash .recon-count{color:var(--success)}
+.recon-card.scan{border-color:var(--primary);background:var(--primary-light)}
+.recon-card.scan .recon-count{color:var(--primary)}
+.recon-card.insurance{border-color:var(--warning);background:var(--warning-light)}
+.recon-card.insurance .recon-count{color:var(--warning)}
+.recon-net{display:flex;justify-content:space-between;align-items:center;padding:14px 16px;background:linear-gradient(135deg,var(--primary-light),#fff);border-left:4px solid var(--primary);border-radius:6px}
+.recon-net .recon-net-label{font-size:14px;font-weight:600;color:var(--text)}
+.recon-net .recon-net-detail{font-size:12px;color:var(--text-secondary);margin-top:2px}
+.recon-net .recon-net-amount{font-size:24px;font-weight:700;color:var(--danger)}
+.recon-net .recon-net-amount .yen{font-size:14px}
+
+.receipt-print-info{background:#f0f7ff;border:1px dashed var(--primary);border-radius:4px;padding:6px 10px;margin-bottom:10px;font-size:10px;color:var(--primary)}
+.receipt-print-info .print-badge{display:inline-block;background:var(--primary);color:#fff;padding:1px 6px;border-radius:3px;font-weight:700;margin-right:4px}
+
+.filter-bar .btn-export{margin-left:auto;padding:6px 14px;font-size:12px;background:var(--success);color:#fff;border:none;border-radius:6px;cursor:pointer;font-weight:600;transition:all .2s;display:inline-flex;align-items:center;gap:4px}
+.filter-bar .btn-export:hover{background:#268a4d}
+
 @media(max-width:640px){
   .package-grid{grid-template-columns:1fr}
   .payment-methods{flex-direction:column}
   .patient-bar{flex-direction:column;align-items:stretch}
   .filter-bar{flex-direction:column;align-items:stretch}
   .filter-bar input,.filter-bar select{width:100%}
+  .recon-cards{grid-template-columns:1fr 1fr}
+  .recon-net{flex-direction:column;text-align:center;gap:8px}
 }
 </style>
 </head>
@@ -281,6 +313,15 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hira
       <option value="refunded">已退款</option>
     </select>
     <button class="btn btn-sm btn-outline" onclick="resetFilters()">重置</button>
+    <button class="btn-export" onclick="exportRecords()">📥 导出CSV</button>
+  </div>
+  <div class="recon-panel" id="reconPanel">
+    <div class="recon-panel-header">
+      <h3>今日对账</h3>
+      <span class="recon-date" id="reconDate"></span>
+    </div>
+    <div class="recon-cards" id="reconCards"></div>
+    <div class="recon-net" id="reconNet"></div>
   </div>
   <div class="record-table">
     <table>
@@ -395,7 +436,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hira
     </div>
     <div class="modal-footer">
       <button class="btn btn-outline" onclick="closeModal('receiptModal')">关闭</button>
-      <button class="btn btn-primary" onclick="window.print()">🖨️ 打印小票</button>
+      <button class="btn btn-warning" onclick="reprintReceipt()">🔄 重打小票</button>
+      <button class="btn btn-primary" onclick="printAndRecord()">🖨️ 打印</button>
     </div>
   </div>
 </div>
@@ -930,18 +972,66 @@ function confirmPayment() {
       status: 'normal',
       time: now.toLocaleString('zh-CN'),
       reason: '正常收费'
+    }],
+    printHistory: [{
+      printNo: 1,
+      time: now.toLocaleString('zh-CN'),
+      type: '首次打印'
     }]
   };
   state.records.unshift(record);
   localStorage.setItem('dental_records', JSON.stringify(state.records));
   closeModal('paymentModal');
+  currentReceiptIdx = 0;
   showReceipt(record);
   resetCashier();
+}
+
+var currentReceiptIdx = -1;
+
+function printAndRecord() {
+  window.print();
+  recordPrint();
+}
+
+function reprintReceipt() {
+  recordPrint();
+  window.print();
+}
+
+function recordPrint() {
+  if (currentReceiptIdx < 0) return;
+  var record = state.records[currentReceiptIdx];
+  if (!record) return;
+  if (!record.printHistory) record.printHistory = [];
+  record.printHistory.push({
+    printNo: record.printHistory.length + 1,
+    time: new Date().toLocaleString('zh-CN'),
+    type: record.printHistory.length === 0 ? '首次打印' : '补打'
+  });
+  localStorage.setItem('dental_records', JSON.stringify(state.records));
+  showReceipt(record);
+  showToast('打印记录已更新（第' + record.printHistory.length + '次）', 'success');
 }
 
 function showReceipt(record) {
   var methodNames = { cash: '现金', scan: '扫码支付', insurance: '医保' };
   var html = '';
+
+  if (record.printHistory && record.printHistory.length > 0) {
+    var lastPrint = record.printHistory[record.printHistory.length - 1];
+    html += '<div class="receipt-print-info">';
+    html += '<span class="print-badge">第' + lastPrint.printNo + '次打印</span> ';
+    html += lastPrint.type + ' · ' + lastPrint.time;
+    if (lastPrint.printNo > 1) {
+      html += '<br>历史打印：';
+      record.printHistory.forEach(function(p, i) {
+        if (i > 0) html += '；';
+        html += '第' + p.printNo + '次(' + p.type + ' ' + p.time + ')';
+      });
+    }
+    html += '</div>';
+  }
 
   if (record.status === 'voided') {
     html += '<div class="receipt-void-banner">⚠️ 此单据已作废</div>';
@@ -1026,6 +1116,13 @@ function applyFilters() {
   renderRecords();
 }
 
+function extractDateStr(timeStr) {
+  if (!timeStr) return '';
+  var m = timeStr.match(/(\d{4})[/\-.年](\d{1,2})[/\-.月](\d{1,2})/);
+  if (m) return m[1] + '-' + String(m[2]).padStart(2, '0') + '-' + String(m[3]).padStart(2, '0');
+  return '';
+}
+
 function resetFilters() {
   document.getElementById('filterPatient').value = '';
   document.getElementById('filterPhone').value = '';
@@ -1085,11 +1182,16 @@ function renderRecords() {
   var filtered = state.records.filter(function(r) {
     if (currentFilters.patient && !r.patient.includes(currentFilters.patient)) return false;
     if (currentFilters.phone && !r.patientPhone.includes(currentFilters.phone)) return false;
-    if (currentFilters.date && r.time.indexOf(currentFilters.date) < 0) return false;
+    if (currentFilters.date) {
+      var recDate = extractDateStr(r.time);
+      if (recDate !== currentFilters.date) return false;
+    }
     if (currentFilters.method && r.payMethod !== currentFilters.method) return false;
     if (currentFilters.status && r.status !== currentFilters.status) return false;
     return true;
   });
+
+  renderReconPanel(filtered);
 
   if (filtered.length === 0) {
     tbody.innerHTML = '';
@@ -1124,7 +1226,129 @@ function renderRecords() {
 }
 
 function viewReceipt(idx) {
+  currentReceiptIdx = idx;
   showReceipt(state.records[idx]);
+}
+
+function renderReconPanel(filtered) {
+  var today = new Date();
+  var todayStr = today.getFullYear() + '/' + String(today.getMonth() + 1).padStart(2, '0') + '/' + String(today.getDate()).padStart(2, '0');
+  document.getElementById('reconDate').textContent = '统计日期：' + todayStr;
+
+  var methods = ['cash', 'scan', 'insurance'];
+  var methodLabels = { cash: '现金', scan: '扫码', insurance: '医保' };
+  var methodClasses = { cash: 'cash', scan: 'scan', insurance: 'insurance' };
+
+  var stats = {};
+  methods.forEach(function(m) {
+    stats[m] = { count: 0, total: 0, voidCount: 0, voidAmount: 0, refundCount: 0, refundAmount: 0 };
+  });
+
+  var totalGross = 0;
+  var totalVoid = 0;
+  var totalRefund = 0;
+
+  filtered.forEach(function(r) {
+    var s = stats[r.payMethod];
+    if (!s) return;
+    if (r.status === 'normal') {
+      s.count++;
+      s.total += r.total;
+      totalGross += r.total;
+    } else if (r.status === 'voided') {
+      s.voidCount++;
+      s.voidAmount += r.total;
+      totalVoid += r.total;
+    } else if (r.status === 'refunded') {
+      s.refundCount++;
+      s.refundAmount += r.total;
+      totalRefund += r.total;
+    }
+  });
+
+  var cardsHtml = methods.map(function(m) {
+    var s = stats[m];
+    return '<div class="recon-card ' + methodClasses[m] + '">' +
+      '<div class="recon-label">' + methodLabels[m] + '</div>' +
+      '<div class="recon-count">' + s.count + ' 笔</div>' +
+      '<div class="recon-amount"><span class="yen">¥</span>' + s.total.toFixed(2) + '</div>' +
+      (s.voidCount > 0 ? '<div style="font-size:11px;color:var(--danger);margin-top:2px">作废' + s.voidCount + '笔 -¥' + s.voidAmount.toFixed(2) + '</div>' : '') +
+      (s.refundCount > 0 ? '<div style="font-size:11px;color:var(--warning);margin-top:2px">退款' + s.refundCount + '笔 -¥' + s.refundAmount.toFixed(2) + '</div>' : '') +
+    '</div>';
+  }).join('');
+  document.getElementById('reconCards').innerHTML = cardsHtml;
+
+  var net = totalGross - totalVoid - totalRefund;
+  var netDetail = '总收费' + filtered.filter(function(r) { return r.status === 'normal'; }).length + '笔 ¥' + totalGross.toFixed(2);
+  if (totalVoid > 0) netDetail += ' · 作废' + filtered.filter(function(r) { return r.status === 'voided'; }).length + '笔 -¥' + totalVoid.toFixed(2);
+  if (totalRefund > 0) netDetail += ' · 退款' + filtered.filter(function(r) { return r.status === 'refunded'; }).length + '笔 -¥' + totalRefund.toFixed(2);
+
+  document.getElementById('reconNet').innerHTML =
+    '<div><div class="recon-net-label">净收款</div><div class="recon-net-detail">' + netDetail + '</div></div>' +
+    '<div class="recon-net-amount"><span class="yen">¥</span>' + net.toFixed(2) + '</div>';
+}
+
+function exportRecords() {
+  var filtered = state.records.filter(function(r) {
+    if (currentFilters.patient && !r.patient.includes(currentFilters.patient)) return false;
+    if (currentFilters.phone && !r.patientPhone.includes(currentFilters.phone)) return false;
+    if (currentFilters.date) {
+      var recDate = extractDateStr(r.time);
+      if (recDate !== currentFilters.date) return false;
+    }
+    if (currentFilters.method && r.payMethod !== currentFilters.method) return false;
+    if (currentFilters.status && r.status !== currentFilters.status) return false;
+    return true;
+  });
+
+  if (filtered.length === 0) { showToast('没有可导出的记录', 'warning'); return; }
+
+  var methodNames = { cash: '现金', scan: '扫码', insurance: '医保' };
+  var statusNames = { normal: '正常', voided: '已作废', refunded: '已退款' };
+
+  var headers = ['流水号', '患者姓名', '手机号', '套餐', '套餐价格', '加项', '加项金额', '总金额', '支付方式', '医保外自费', '状态', '作废/退款原因', '收费时间', '备注'];
+  var rows = filtered.map(function(r) {
+    var addons = r.addons.map(function(a) { return a.name; }).join('+');
+    var addonPrices = r.addons.map(function(a) { return a.price; }).join('+');
+    var reason = '';
+    if (r.statusHistory) {
+      r.statusHistory.forEach(function(h) {
+        if (h.status !== 'normal') reason += (reason ? '；' : '') + h.reason;
+      });
+    }
+    return [
+      r.id,
+      r.patient,
+      r.patientPhone,
+      r.packageName,
+      r.packagePrice,
+      addons || '',
+      addonPrices || '',
+      r.total.toFixed(2),
+      methodNames[r.payMethod] || r.payMethod,
+      r.selfPay ? '是' : '否',
+      statusNames[r.status] || r.status,
+      reason,
+      r.time,
+      r.remark || ''
+    ];
+  });
+
+  var BOM = '\uFEFF';
+  var csvContent = BOM + headers.map(function(h) { return '"' + h + '"'; }).join(',') + '\n';
+  rows.forEach(function(row) {
+    csvContent += row.map(function(cell) { return '"' + String(cell).replace(/"/g, '""') + '"'; }).join(',') + '\n';
+  });
+
+  var blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  var url = URL.createObjectURL(blob);
+  var link = document.createElement('a');
+  var dateLabel = currentFilters.date || new Date().toISOString().slice(0, 10);
+  link.href = url;
+  link.download = '洁牙收费流水_' + dateLabel + '.csv';
+  link.click();
+  URL.revokeObjectURL(url);
+  showToast('已导出' + filtered.length + '条记录', 'success');
 }
 
 function openModal(id) {
