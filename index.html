@@ -79,6 +79,9 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hira
 .btn-outline{background:#fff;color:var(--primary);border:2px solid var(--primary)}
 .btn-outline:hover{background:var(--primary-light)}
 .btn-sm{padding:6px 14px;font-size:12px}
+.btn-danger{background:var(--danger);color:#fff}
+.btn-danger:hover{background:#c0392b}
+.btn-danger:disabled{background:#f0a098;cursor:not-allowed}
 
 .modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:200;align-items:center;justify-content:center}
 .modal-overlay.show{display:flex}
@@ -150,10 +153,49 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hira
 .insurance-mark label{display:flex;align-items:center;gap:6px;cursor:pointer;font-weight:500;color:var(--danger)}
 .insurance-mark input[type=checkbox]{accent-color:var(--danger);width:16px;height:16px}
 
+.search-results{position:absolute;top:100%;left:0;right:0;background:var(--card);border:2px solid var(--border);border-top:none;border-radius:0 0 6px 6px;box-shadow:var(--shadow);z-index:50;max-height:240px;overflow-y:auto;display:none}
+.search-results.show{display:block}
+.search-result-item{padding:10px 12px;cursor:pointer;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center}
+.search-result-item:hover{background:var(--primary-light)}
+.search-result-item:last-child{border-bottom:none}
+.search-result-item .name{font-weight:600}
+.search-result-item .phone{color:var(--text-secondary);font-size:12px}
+.search-result-item .tag{background:var(--primary-light);color:var(--primary);padding:2px 8px;border-radius:3px;font-size:11px}
+.search-result-new{padding:10px 12px;cursor:pointer;color:var(--primary);border-top:2px dashed var(--border);font-weight:600}
+.search-result-new:hover{background:var(--primary-light)}
+
+.patient-display{background:linear-gradient(135deg,var(--primary-light),#fff);border-left:4px solid var(--primary);padding:12px 16px;border-radius:6px;margin-bottom:16px;display:none;align-items:center;justify-content:space-between}
+.patient-display.show{display:flex}
+.patient-display .patient-main{font-size:15px;font-weight:700;color:var(--text)}
+.patient-display .patient-sub{font-size:12px;color:var(--text-secondary);margin-top:2px}
+.patient-display .btn-sm{margin-left:8px}
+
+.filter-bar{background:var(--card);border-radius:var(--radius);padding:16px 20px;margin-bottom:16px;box-shadow:var(--shadow);display:flex;gap:12px;flex-wrap:wrap;align-items:center}
+.filter-bar label{font-weight:600;font-size:13px;color:var(--text-secondary)}
+.filter-bar input,.filter-bar select{padding:6px 10px;border:2px solid var(--border);border-radius:6px;font-size:13px;outline:none;min-width:120px}
+.filter-bar input:focus,.filter-bar select:focus{border-color:var(--primary)}
+.filter-bar .btn-sm{padding:6px 16px}
+
+.badge-danger{background:var(--danger-light);color:var(--danger)}
+.badge-default{background:#f0f2f5;color:var(--text-secondary)}
+
+.patient-form{display:flex;flex-direction:column;gap:12px}
+.patient-form-row{display:flex;gap:12px}
+.patient-form-row .form-group{flex:1}
+
+.record-addon-detail{font-size:11px;color:var(--text-secondary);margin-top:2px}
+
+.void-reason{width:100%;padding:8px 12px;border:2px solid var(--border);border-radius:6px;font-size:13px;min-height:80px;resize:vertical;outline:none}
+.void-reason:focus{border-color:var(--danger)}
+
+.receipt-void-banner{background:var(--danger-light);color:var(--danger);text-align:center;padding:6px;border-radius:4px;font-weight:700;margin-bottom:10px;font-size:13px}
+
 @media(max-width:640px){
   .package-grid{grid-template-columns:1fr}
   .payment-methods{flex-direction:column}
   .patient-bar{flex-direction:column;align-items:stretch}
+  .filter-bar{flex-direction:column;align-items:stretch}
+  .filter-bar input,.filter-bar select{width:100%}
 }
 </style>
 </head>
@@ -172,13 +214,22 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hira
     <label>👤 患者查询</label>
     <div class="search-box">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-      <input type="text" id="patientSearch" placeholder="输入患者姓名或手机号搜索..." oninput="searchPatient(this.value)">
+      <input type="text" id="patientSearch" placeholder="输入患者姓名或手机号搜索..." oninput="searchPatient(this.value)" onfocus="showSearchResults()">
+      <div class="search-results" id="searchResults"></div>
     </div>
     <div class="patient-info" id="patientInfo" style="display:none">
       <span id="patientName"></span>
       <span id="patientPhone"></span>
       <span class="tag" id="patientTag"></span>
     </div>
+  </div>
+
+  <div class="patient-display" id="patientDisplay">
+    <div>
+      <div class="patient-main" id="patientDisplayName"></div>
+      <div class="patient-sub" id="patientDisplaySub"></div>
+    </div>
+    <button class="btn btn-sm btn-outline" onclick="clearPatient()">切换患者</button>
   </div>
 
   <div class="section-title">选择洁牙套餐</div>
@@ -208,10 +259,33 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hira
 
 <div id="page-records" class="page">
   <div class="section-title">收费记录</div>
+  <div class="filter-bar">
+    <label>患者</label>
+    <input type="text" id="filterPatient" placeholder="输入患者姓名..." oninput="applyFilters()">
+    <label>手机号</label>
+    <input type="text" id="filterPhone" placeholder="输入手机号..." oninput="applyFilters()">
+    <label>日期</label>
+    <input type="date" id="filterDate" oninput="applyFilters()">
+    <label>支付方式</label>
+    <select id="filterMethod" onchange="applyFilters()">
+      <option value="">全部</option>
+      <option value="cash">现金</option>
+      <option value="scan">扫码</option>
+      <option value="insurance">医保</option>
+    </select>
+    <label>状态</label>
+    <select id="filterStatus" onchange="applyFilters()">
+      <option value="">全部</option>
+      <option value="normal">正常</option>
+      <option value="voided">已作废</option>
+      <option value="refunded">已退款</option>
+    </select>
+    <button class="btn btn-sm btn-outline" onclick="resetFilters()">重置</button>
+  </div>
   <div class="record-table">
     <table>
       <thead>
-        <tr><th>流水号</th><th>患者</th><th>套餐</th><th>加项</th><th>金额</th><th>支付方式</th><th>医保外自费</th><th>时间</th><th>操作</th></tr>
+        <tr><th>流水号</th><th>患者</th><th>套餐</th><th>金额</th><th>支付方式</th><th>状态</th><th>时间</th><th>操作</th></tr>
       </thead>
       <tbody id="recordBody"></tbody>
     </table>
@@ -326,7 +400,77 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hira
   </div>
 </div>
 
+<div class="modal-overlay" id="newPatientModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>新增患者</h3>
+      <button class="modal-close" onclick="closeModal('newPatientModal')">&times;</button>
+    </div>
+    <div class="modal-body">
+      <p style="margin-bottom:14px;font-size:13px;color:var(--text-secondary)">请输入新患者的姓名和完整手机号</p>
+      <div class="patient-form">
+        <div class="patient-form-row">
+          <div class="form-group">
+            <label>患者姓名</label>
+            <input type="text" id="newPatientName" placeholder="请输入姓名">
+          </div>
+          <div class="form-group">
+            <label>手机号</label>
+            <input type="tel" id="newPatientPhone" placeholder="请输入11位手机号" maxlength="11">
+          </div>
+        </div>
+        <div class="form-group">
+          <label>标签（可选）</label>
+          <select id="newPatientTag">
+            <option value="首诊">首诊</option>
+            <option value="老客户">老客户</option>
+            <option value="医保">医保</option>
+            <option value="VIP">VIP</option>
+          </select>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('newPatientModal')">取消</button>
+      <button class="btn btn-primary" onclick="saveNewPatient()">保存并选择</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="voidModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="voidModalTitle">作废记录</h3>
+      <button class="modal-close" onclick="closeModal('voidModal')">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div style="background:var(--danger-light);padding:12px;border-radius:6px;margin-bottom:14px">
+        <p style="font-size:13px;font-weight:600;color:var(--danger)">⚠️ 此操作不可撤销，请谨慎操作</p>
+        <p style="font-size:12px;color:var(--danger);margin-top:4px">流水号：<span id="voidRecordId"></span></p>
+        <p style="font-size:12px;color:var(--danger);margin-top:2px">患者：<span id="voidRecordPatient"></span></p>
+        <p style="font-size:12px;color:var(--danger);margin-top:2px">金额：¥<span id="voidRecordAmount"></span></p>
+      </div>
+      <div class="form-group">
+        <label id="voidReasonLabel">作废原因</label>
+        <textarea class="void-reason" id="voidReason" placeholder="请详细说明原因，便于后续追溯..."></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('voidModal')">取消</button>
+      <button class="btn btn-danger" id="confirmVoidBtn" onclick="confirmVoid()">确认作废</button>
+    </div>
+  </div>
+</div>
+
 <script>
+var DOCTOR_NAMES = {
+  'dr_wang': '王医生 - 牙体牙髓科',
+  'dr_li': '李医生 - 牙周科',
+  'dr_zhang': '张医生 - 修复科',
+  'dr_chen': '陈医生 - 综合科',
+  'dr_liu': '刘医生 - 预防科'
+};
+
 var PACKAGES = [
   {
     id: 'basic',
@@ -374,20 +518,24 @@ var ADDON_ITEMS = [
 ];
 
 var MOCK_PATIENTS = [
-  { name: '张明远', phone: '138****5621', tag: '老客户' },
-  { name: '李思涵', phone: '159****8834', tag: '首诊' },
-  { name: '王晓峰', phone: '186****2207', tag: '医保' },
-  { name: '赵雨桐', phone: '137****4490', tag: '老客户' },
-  { name: '陈佳怡', phone: '152****7718', tag: '首诊' }
+  { name: '张明远', phone: '13812345621', tag: '老客户' },
+  { name: '李思涵', phone: '15987658834', tag: '首诊' },
+  { name: '王晓峰', phone: '18622332207', tag: '医保' },
+  { name: '赵雨桐', phone: '13755664490', tag: '老客户' },
+  { name: '陈佳怡', phone: '15288997718', tag: '首诊' }
 ];
 
 var state = {
   selectedPatient: null,
   selectedPackage: null,
   addons: [],
+  addonMeta: {},
+  tempAddons: [],
+  tempSigned: false,
   payMethod: null,
   signed: false,
-  records: JSON.parse(localStorage.getItem('dental_records') || '[]')
+  records: JSON.parse(localStorage.getItem('dental_records') || '[]'),
+  allPatients: JSON.parse(localStorage.getItem('dental_patients') || '[]').concat(MOCK_PATIENTS)
 };
 
 function switchPage(page) {
@@ -398,22 +546,131 @@ function switchPage(page) {
   if (page === 'records') renderRecords();
 }
 
-function searchPatient(val) {
-  var info = document.getElementById('patientInfo');
-  if (!val.trim()) { info.style.display = 'none'; state.selectedPatient = null; return; }
-  var found = MOCK_PATIENTS.find(function(p) {
-    return p.name.includes(val) || p.phone.includes(val);
-  });
-  if (found) {
-    state.selectedPatient = found;
-    document.getElementById('patientName').textContent = found.name;
-    document.getElementById('patientPhone').textContent = found.phone;
-    document.getElementById('patientTag').textContent = found.tag;
-    info.style.display = 'flex';
-  } else {
-    info.style.display = 'none';
-    state.selectedPatient = null;
+document.addEventListener('click', function(e) {
+  var searchBox = document.querySelector('.search-box');
+  var results = document.getElementById('searchResults');
+  if (!searchBox.contains(e.target)) {
+    results.classList.remove('show');
   }
+});
+
+function showSearchResults() {
+  var val = document.getElementById('patientSearch').value;
+  searchPatient(val);
+}
+
+function searchPatient(val) {
+  var resultsEl = document.getElementById('searchResults');
+  var trimmed = val.trim();
+
+  if (!trimmed) {
+    resultsEl.innerHTML = '<div class="search-result-new" onclick="openNewPatientModal()">➕ 新增新患者</div>';
+    resultsEl.classList.add('show');
+    return;
+  }
+
+  var found = state.allPatients.filter(function(p) {
+    return p.name.includes(trimmed) || p.phone.includes(trimmed);
+  });
+
+  var html = '';
+  found.forEach(function(p, idx) {
+    html += '<div class="search-result-item" onclick="selectPatient(' + idx + ', \'' + val + '\')">' +
+      '<div><div class="name">' + p.name + '</div><div class="phone">' + p.phone.replace(/(\d{3})(\d{4})(\d{4})/, '$1****$3') + '</div></div>' +
+      '<span class="tag">' + p.tag + '</span>' +
+    '</div>';
+  });
+
+  if (trimmed.length >= 2) {
+    html += '<div class="search-result-new" onclick="openNewPatientModal()">➕ 新增患者：' + trimmed + '</div>';
+  }
+
+  if (!html) {
+    html = '<div class="search-result-item" style="color:var(--text-secondary);cursor:default">未找到匹配患者</div>';
+    html += '<div class="search-result-new" onclick="openNewPatientModal()">➕ 新增新患者</div>';
+  }
+
+  resultsEl.innerHTML = html;
+  resultsEl.classList.add('show');
+}
+
+function selectPatient(idx, query) {
+  var val = document.getElementById('patientSearch').value;
+  var trimmed = val.trim();
+  var found = state.allPatients.filter(function(p) {
+    return p.name.includes(trimmed) || p.phone.includes(trimmed);
+  });
+  var patient = found[idx];
+  state.selectedPatient = patient;
+
+  var info = document.getElementById('patientInfo');
+  document.getElementById('patientName').textContent = patient.name;
+  document.getElementById('patientPhone').textContent = patient.phone.replace(/(\d{3})(\d{4})(\d{4})/, '$1****$3');
+  document.getElementById('patientTag').textContent = patient.tag;
+  info.style.display = 'flex';
+
+  var display = document.getElementById('patientDisplay');
+  document.getElementById('patientDisplayName').textContent = '👤 ' + patient.name + '  (' + patient.tag + ')';
+  document.getElementById('patientDisplaySub').textContent = '手机号：' + patient.phone.replace(/(\d{3})(\d{4})(\d{4})/, '$1****$3');
+  display.classList.add('show');
+
+  document.getElementById('patientSearch').value = '';
+  document.getElementById('searchResults').classList.remove('show');
+  showToast('已选择患者：' + patient.name, 'success');
+}
+
+function clearPatient() {
+  state.selectedPatient = null;
+  document.getElementById('patientInfo').style.display = 'none';
+  document.getElementById('patientDisplay').classList.remove('show');
+  document.getElementById('patientSearch').value = '';
+}
+
+function openNewPatientModal() {
+  var query = document.getElementById('patientSearch').value.trim();
+  if (query && query.length >= 2 && !/\d/.test(query)) {
+    document.getElementById('newPatientName').value = query;
+  } else {
+    document.getElementById('newPatientName').value = '';
+  }
+  document.getElementById('newPatientPhone').value = '';
+  document.getElementById('searchResults').classList.remove('show');
+  openModal('newPatientModal');
+}
+
+function saveNewPatient() {
+  var name = document.getElementById('newPatientName').value.trim();
+  var phone = document.getElementById('newPatientPhone').value.trim();
+  var tag = document.getElementById('newPatientTag').value;
+
+  if (!name) { showToast('请输入患者姓名', 'warning'); return; }
+  if (!/^1\d{10}$/.test(phone)) { showToast('请输入正确的11位手机号', 'warning'); return; }
+
+  var existing = state.allPatients.find(function(p) { return p.phone === phone; });
+  if (existing) { showToast('该手机号已存在患者：' + existing.name, 'warning'); return; }
+
+  var newPatient = { name: name, phone: phone, tag: tag };
+  state.allPatients.unshift(newPatient);
+  state.selectedPatient = newPatient;
+
+  var savedPatients = state.allPatients.filter(function(p) {
+    return !MOCK_PATIENTS.find(function(m) { return m.phone === p.phone; });
+  });
+  localStorage.setItem('dental_patients', JSON.stringify(savedPatients));
+
+  var info = document.getElementById('patientInfo');
+  document.getElementById('patientName').textContent = name;
+  document.getElementById('patientPhone').textContent = phone.replace(/(\d{3})(\d{4})(\d{4})/, '$1****$3');
+  document.getElementById('patientTag').textContent = tag;
+  info.style.display = 'flex';
+
+  var display = document.getElementById('patientDisplay');
+  document.getElementById('patientDisplayName').textContent = '👤 ' + name + '  (' + tag + ')';
+  document.getElementById('patientDisplaySub').textContent = '手机号：' + phone.replace(/(\d{3})(\d{4})(\d{4})/, '$1****$3');
+  display.classList.add('show');
+
+  closeModal('newPatientModal');
+  showToast('患者已添加并选中', 'success');
 }
 
 function renderPackages() {
@@ -434,6 +691,7 @@ function renderPackages() {
 function selectPackage(id) {
   state.selectedPackage = PACKAGES.find(function(p) { return p.id === id; });
   state.addons = [];
+  state.addonMeta = {};
   document.querySelectorAll('.pkg-card').forEach(function(c) {
     c.classList.toggle('selected', c.dataset.id === id);
   });
@@ -459,11 +717,17 @@ function renderOrder() {
   });
 
   var addonsTotal = 0;
-  state.addons.forEach(function(addon) {
-    var item = ADDON_ITEMS.find(function(a) { return a.id === addon; });
+  state.addons.forEach(function(addonId) {
+    var item = ADDON_ITEMS.find(function(a) { return a.id === addonId; });
+    var meta = state.addonMeta[addonId];
     if (item) {
       addonsTotal += item.price;
-      html += '<tr class="addon-row"><td class="item-name">' + item.name + '<span class="item-tag addon">加项</span></td>';
+      var doctor = meta ? DOCTOR_NAMES[meta.doctorSource] : '';
+      html += '<tr class="addon-row"><td class="item-name">' + item.name + '<span class="item-tag addon">加项</span>';
+      if (doctor) {
+        html += '<div class="record-addon-detail">医生建议：' + doctor + '</div>';
+      }
+      html += '</td>';
       html += '<td class="price-col">¥' + item.price + '</td>';
       html += '<td class="price-col" style="color:var(--danger)">¥' + item.price + '</td></tr>';
     }
@@ -479,10 +743,15 @@ function renderOrder() {
 
 function openAddonModal() {
   if (!state.selectedPackage) return;
+  state.tempAddons = state.addons.slice();
+  state.tempSigned = false;
+  state.tempPatientConfirm = false;
+  state.tempDoctorSource = '';
+
   var list = document.getElementById('addonList');
   list.innerHTML = ADDON_ITEMS.map(function(item) {
-    var checked = state.addons.indexOf(item.id) >= 0 ? ' checked' : '';
-    return '<div class="addon-item' + checked + '" data-id="' + item.id + '" onclick="toggleAddon(this,\'' + item.id + '\')">' +
+    var checked = state.tempAddons.indexOf(item.id) >= 0 ? ' checked' : '';
+    return '<div class="addon-item' + checked + '" data-id="' + item.id + '" onclick="toggleTempAddon(this,\'' + item.id + '\')">' +
       '<div class="addon-check">' + (checked ? '✓' : '') + '</div>' +
       '<div class="addon-info"><div class="addon-name">' + item.name + '</div><div class="addon-desc">' + item.desc + '</div></div>' +
       '<div class="addon-price">¥' + item.price + '</div>' +
@@ -493,33 +762,60 @@ function openAddonModal() {
   state.signed = false;
   var signArea = document.getElementById('signArea');
   signArea.classList.remove('signed');
-  signArea.querySelector('span, text') && (signArea.firstChild.textContent = '点击此处手写签名');
+  var placeholder = signArea.firstChild;
+  if (placeholder && placeholder.nodeType === 3) placeholder.textContent = '点击此处手写签名';
   clearSignCanvas();
   openModal('addonModal');
 }
 
-function toggleAddon(el, id) {
-  var idx = state.addons.indexOf(id);
+function toggleTempAddon(el, id) {
+  var idx = state.tempAddons.indexOf(id);
   if (idx >= 0) {
-    state.addons.splice(idx, 1);
+    state.tempAddons.splice(idx, 1);
     el.classList.remove('checked');
     el.querySelector('.addon-check').textContent = '';
   } else {
-    state.addons.push(id);
+    state.tempAddons.push(id);
     el.classList.add('checked');
     el.querySelector('.addon-check').textContent = '✓';
   }
 }
 
 function confirmAddons() {
-  if (state.addons.length === 0) { closeModal('addonModal'); return; }
+  if (state.tempAddons.length === 0) {
+    state.addons = [];
+    state.addonMeta = {};
+    renderOrder();
+    closeModal('addonModal');
+    return;
+  }
   var doctor = document.getElementById('doctorSource').value;
   if (!doctor) { showToast('请选择医生建议来源', 'warning'); return; }
   if (!document.getElementById('patientConfirm').checked) { showToast('请确认患者已同意加项', 'warning'); return; }
   if (!state.signed) { showToast('请完成患者签字确认', 'warning'); return; }
+
+  state.addons = state.tempAddons.slice();
+  var meta = {
+    doctorSource: doctor,
+    patientConfirmed: true,
+    patientSigned: true,
+    confirmedAt: new Date().toLocaleString('zh-CN')
+  };
+  state.tempAddons.forEach(function(id) {
+    state.addonMeta[id] = meta;
+  });
+
   renderOrder();
   closeModal('addonModal');
-  showToast('加项已确认', 'success');
+  showToast('加项已确认并加入订单', 'success');
+}
+
+function closeModal(id) {
+  document.getElementById(id).classList.remove('show');
+  if (id === 'addonModal') {
+    state.tempAddons = [];
+    state.tempSigned = false;
+  }
 }
 
 var signCtx = null;
@@ -598,25 +894,43 @@ function confirmPayment() {
   if (!state.payMethod) { showToast('请选择支付方式', 'warning'); return; }
   var total = calcTotal();
   var now = new Date();
+
+  var addonsWithMeta = state.addons.map(function(id) {
+    var item = ADDON_ITEMS.find(function(a) { return a.id === id; });
+    var meta = state.addonMeta[id] || {};
+    return item ? {
+      id: id,
+      name: item.name,
+      price: item.price,
+      doctorSource: meta.doctorSource || '',
+      patientConfirmed: meta.patientConfirmed || false,
+      patientSigned: meta.patientSigned || false,
+      confirmedAt: meta.confirmedAt || ''
+    } : null;
+  }).filter(Boolean);
+
   var record = {
     id: 'DJ' + now.getFullYear() + String(now.getMonth() + 1).padStart(2, '0') + String(now.getDate()).padStart(2, '0') + String(Math.floor(Math.random() * 9000) + 1000),
     patient: state.selectedPatient.name,
     patientPhone: state.selectedPatient.phone,
+    patientTag: state.selectedPatient.tag,
     packageId: state.selectedPackage.id,
     packageName: state.selectedPackage.name,
     packageItems: state.selectedPackage.items.slice(),
     packageOriginalPrice: state.selectedPackage.originalPrice,
     packagePrice: state.selectedPackage.price,
-    addons: state.addons.map(function(id) {
-      var item = ADDON_ITEMS.find(function(a) { return a.id === id; });
-      return item ? { name: item.name, price: item.price } : null;
-    }).filter(Boolean),
+    addons: addonsWithMeta,
     total: total,
     payMethod: state.payMethod,
     selfPay: document.getElementById('selfPayMark').checked,
     remark: document.getElementById('payRemark').value,
     time: now.toLocaleString('zh-CN'),
-    doctorSource: document.getElementById('doctorSource').value
+    status: 'normal',
+    statusHistory: [{
+      status: 'normal',
+      time: now.toLocaleString('zh-CN'),
+      reason: '正常收费'
+    }]
   };
   state.records.unshift(record);
   localStorage.setItem('dental_records', JSON.stringify(state.records));
@@ -627,11 +941,20 @@ function confirmPayment() {
 
 function showReceipt(record) {
   var methodNames = { cash: '现金', scan: '扫码支付', insurance: '医保' };
-  var html = '<div class="receipt-header">' +
+  var html = '';
+
+  if (record.status === 'voided') {
+    html += '<div class="receipt-void-banner">⚠️ 此单据已作废</div>';
+  } else if (record.status === 'refunded') {
+    html += '<div class="receipt-void-banner">⚠️ 此单据已退款</div>';
+  }
+
+  html += '<div class="receipt-header">' +
     '<h4>🦷 洁牙抛光套餐收费凭证</h4>' +
     '<p>流水号：' + record.id + '</p>' +
   '</div>';
-  html += '<div class="receipt-line"><span>患者</span><span>' + record.patient + '</span></div>';
+  html += '<div class="receipt-line"><span>患者</span><span>' + record.patient + ' (' + record.patientTag + ')</span></div>';
+  html += '<div class="receipt-line"><span>手机号</span><span>' + record.patientPhone.replace(/(\d{3})(\d{4})(\d{4})/, '$1****$3') + '</span></div>';
   html += '<div class="receipt-line"><span>时间</span><span>' + record.time + '</span></div>';
   html += '<hr class="receipt-divider">';
   html += '<div class="receipt-section-title">✅ 洁牙抛光套餐已含项目</div>';
@@ -641,9 +964,15 @@ function showReceipt(record) {
   html += '<div class="receipt-line"><span>' + record.packageName + '套餐</span><span>¥' + record.packagePrice + '</span></div>';
   if (record.addons.length > 0) {
     html += '<hr class="receipt-divider">';
-    html += '<div class="receipt-section-title">➕ 加项</div>';
+    html += '<div class="receipt-section-title">➕ 加项（需医生建议+患者确认）</div>';
     record.addons.forEach(function(a) {
       html += '<div class="receipt-line"><span>' + a.name + '</span><span>¥' + a.price + '</span></div>';
+      if (a.doctorSource) {
+        html += '<div style="font-size:10px;color:var(--text-secondary);padding-left:12px">建议医生：' + DOCTOR_NAMES[a.doctorSource] + '</div>';
+      }
+      if (a.patientConfirmed && a.patientSigned) {
+        html += '<div style="font-size:10px;color:var(--success);padding-left:12px">✓ 患者知情同意并签字确认</div>';
+      }
     });
   }
   html += '<hr class="receipt-divider">';
@@ -655,6 +984,18 @@ function showReceipt(record) {
   if (record.remark) {
     html += '<div class="receipt-line"><span>备注</span><span>' + record.remark + '</span></div>';
   }
+
+  if (record.status !== 'normal' && record.statusHistory) {
+    html += '<hr class="receipt-divider">';
+    record.statusHistory.forEach(function(h) {
+      if (h.status !== 'normal') {
+        var statusText = h.status === 'voided' ? '已作废' : '已退款';
+        html += '<div style="font-size:11px;color:var(--danger)">' + statusText + '：' + h.time + '</div>';
+        html += '<div style="font-size:11px;color:var(--text-secondary);padding-left:12px">原因：' + h.reason + '</div>';
+      }
+    });
+  }
+
   html += '<div class="receipt-footer">此凭证为收费依据，请妥善保管<br>如有疑问请联系前台</div>';
   document.getElementById('receiptContent').innerHTML = html;
   openModal('receiptModal');
@@ -663,33 +1004,121 @@ function showReceipt(record) {
 function resetCashier() {
   state.selectedPackage = null;
   state.addons = [];
+  state.addonMeta = {};
   document.querySelectorAll('.pkg-card').forEach(function(c) { c.classList.remove('selected'); });
   document.getElementById('orderSection').style.display = 'none';
+}
+
+var currentFilters = {
+  patient: '',
+  phone: '',
+  date: '',
+  method: '',
+  status: ''
+};
+
+function applyFilters() {
+  currentFilters.patient = document.getElementById('filterPatient').value.trim();
+  currentFilters.phone = document.getElementById('filterPhone').value.trim();
+  currentFilters.date = document.getElementById('filterDate').value;
+  currentFilters.method = document.getElementById('filterMethod').value;
+  currentFilters.status = document.getElementById('filterStatus').value;
+  renderRecords();
+}
+
+function resetFilters() {
+  document.getElementById('filterPatient').value = '';
+  document.getElementById('filterPhone').value = '';
+  document.getElementById('filterDate').value = '';
+  document.getElementById('filterMethod').value = '';
+  document.getElementById('filterStatus').value = '';
+  currentFilters = { patient: '', phone: '', date: '', method: '', status: '' };
+  renderRecords();
+}
+
+var currentVoidRecordIndex = -1;
+var currentVoidType = 'voided';
+
+function openVoidModal(idx, type) {
+  var record = state.records[idx];
+  if (!record || record.status !== 'normal') {
+    showToast('该记录状态不允许此操作', 'warning');
+    return;
+  }
+  currentVoidRecordIndex = idx;
+  currentVoidType = type;
+  document.getElementById('voidModalTitle').textContent = type === 'voided' ? '作废记录' : '退款记录';
+  document.getElementById('voidReasonLabel').textContent = type === 'voided' ? '作废原因' : '退款原因';
+  document.getElementById('confirmVoidBtn').textContent = type === 'voided' ? '确认作废' : '确认退款';
+  document.getElementById('confirmVoidBtn').className = type === 'voided' ? 'btn btn-danger' : 'btn btn-warning';
+  document.getElementById('voidRecordId').textContent = record.id;
+  document.getElementById('voidRecordPatient').textContent = record.patient;
+  document.getElementById('voidRecordAmount').textContent = record.total.toFixed(2);
+  document.getElementById('voidReason').value = '';
+  openModal('voidModal');
+}
+
+function confirmVoid() {
+  var reason = document.getElementById('voidReason').value.trim();
+  if (!reason) { showToast('请填写原因', 'warning'); return; }
+  if (reason.length < 5) { showToast('原因请至少填写5个字', 'warning'); return; }
+
+  var record = state.records[currentVoidRecordIndex];
+  record.status = currentVoidType;
+  record.statusHistory.push({
+    status: currentVoidType,
+    time: new Date().toLocaleString('zh-CN'),
+    reason: reason
+  });
+
+  localStorage.setItem('dental_records', JSON.stringify(state.records));
+  closeModal('voidModal');
+  renderRecords();
+  var actionText = currentVoidType === 'voided' ? '作废' : '退款';
+  showToast('记录已' + actionText, 'success');
 }
 
 function renderRecords() {
   var tbody = document.getElementById('recordBody');
   var empty = document.getElementById('emptyRecords');
-  if (state.records.length === 0) {
+
+  var filtered = state.records.filter(function(r) {
+    if (currentFilters.patient && !r.patient.includes(currentFilters.patient)) return false;
+    if (currentFilters.phone && !r.patientPhone.includes(currentFilters.phone)) return false;
+    if (currentFilters.date && r.time.indexOf(currentFilters.date) < 0) return false;
+    if (currentFilters.method && r.payMethod !== currentFilters.method) return false;
+    if (currentFilters.status && r.status !== currentFilters.status) return false;
+    return true;
+  });
+
+  if (filtered.length === 0) {
     tbody.innerHTML = '';
     empty.style.display = 'block';
+    empty.querySelector('p').textContent = state.records.length === 0 ? '暂无收费记录' : '没有符合筛选条件的记录';
     return;
   }
   empty.style.display = 'none';
   var methodNames = { cash: '现金', scan: '扫码', insurance: '医保' };
-  tbody.innerHTML = state.records.map(function(r, idx) {
-    var addons = r.addons.map(function(a) { return a.name; }).join('、') || '-';
+  var statusNames = { normal: '正常', voided: '已作废', refunded: '已退款' };
+  var statusBadges = { normal: 'badge-success', voided: 'badge-danger', refunded: 'badge-warning' };
+
+  tbody.innerHTML = filtered.map(function(r) {
+    var actualIdx = state.records.indexOf(r);
     var methodBadge = r.payMethod === 'cash' ? 'badge-success' : r.payMethod === 'scan' ? 'badge-primary' : 'badge-warning';
+    var addonsHtml = r.addons.map(function(a) { return a.name; }).join('、') || '-';
     return '<tr>' +
       '<td>' + r.id + '</td>' +
-      '<td>' + r.patient + '</td>' +
-      '<td>' + r.packageName + '</td>' +
-      '<td>' + addons + '</td>' +
+      '<td>' + r.patient + '<div class="record-addon-detail">' + r.patientPhone.replace(/(\d{3})(\d{4})(\d{4})/, '$1****$3') + '</div></td>' +
+      '<td>' + r.packageName + (r.addons.length > 0 ? '<div class="record-addon-detail">加项：' + addonsHtml + '</div>' : '') + '</td>' +
       '<td style="font-weight:700;color:var(--danger)">¥' + r.total.toFixed(0) + '</td>' +
       '<td><span class="badge ' + methodBadge + '">' + (methodNames[r.payMethod] || r.payMethod) + '</span></td>' +
-      '<td>' + (r.selfPay ? '<span class="badge badge-warning">是</span>' : '否') + '</td>' +
+      '<td><span class="badge ' + statusBadges[r.status] + '">' + statusNames[r.status] + '</span></td>' +
       '<td style="color:var(--text-secondary);font-size:12px">' + r.time + '</td>' +
-      '<td><button class="btn btn-sm btn-outline" onclick="viewReceipt(' + idx + ')">小票</button></td>' +
+      '<td>' +
+        '<button class="btn btn-sm btn-outline" onclick="viewReceipt(' + actualIdx + ')" style="margin-right:4px">小票</button>' +
+        (r.status === 'normal' ? '<button class="btn btn-sm btn-warning" onclick="openVoidModal(' + actualIdx + ', \'refunded\')" style="margin-right:4px">退款</button>' : '') +
+        (r.status === 'normal' ? '<button class="btn btn-sm btn-danger" onclick="openVoidModal(' + actualIdx + ', \'voided\')">作废</button>' : '') +
+      '</td>' +
     '</tr>';
   }).join('');
 }
@@ -700,10 +1129,6 @@ function viewReceipt(idx) {
 
 function openModal(id) {
   document.getElementById(id).classList.add('show');
-}
-
-function closeModal(id) {
-  document.getElementById(id).classList.remove('show');
 }
 
 var toastTimer = null;
