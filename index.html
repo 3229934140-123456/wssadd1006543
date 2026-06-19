@@ -1,0 +1,726 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>洁牙抛光套餐收银工作台</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --primary:#1a6fb5;--primary-light:#e8f4fd;--primary-dark:#145a94;
+  --success:#2e9e5a;--success-light:#eaf7ef;--warning:#e6a23c;--warning-light:#fdf6ec;
+  --danger:#e74c3c;--danger-light:#fef0ef;
+  --bg:#f0f2f5;--card:#fff;--border:#e4e7ed;--text:#303133;--text-secondary:#909399;--text-light:#c0c4cc;
+  --radius:8px;--shadow:0 2px 12px rgba(0,0,0,.08);
+}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;background:var(--bg);color:var(--text);font-size:14px;line-height:1.6;min-height:100vh}
+.header{background:linear-gradient(135deg,var(--primary),var(--primary-dark));color:#fff;padding:0 24px;height:56px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;box-shadow:0 2px 8px rgba(26,111,181,.3)}
+.header h1{font-size:18px;font-weight:600;letter-spacing:1px}
+.header-nav{display:flex;gap:4px}
+.header-nav button{background:rgba(255,255,255,.15);border:none;color:#fff;padding:6px 16px;border-radius:4px;cursor:pointer;font-size:13px;transition:all .2s}
+.header-nav button:hover,.header-nav button.active{background:rgba(255,255,255,.3)}
+.page{display:none;padding:20px 24px;max-width:1200px;margin:0 auto}
+.page.active{display:block}
+
+.patient-bar{background:var(--card);border-radius:var(--radius);padding:16px 20px;margin-bottom:20px;box-shadow:var(--shadow);display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.patient-bar label{font-weight:600;color:var(--primary);white-space:nowrap;font-size:15px}
+.search-box{position:relative;flex:1;min-width:220px}
+.search-box input{width:100%;padding:8px 12px 8px 36px;border:2px solid var(--border);border-radius:6px;font-size:14px;transition:border-color .2s;outline:none}
+.search-box input:focus{border-color:var(--primary)}
+.search-box svg{position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--text-secondary)}
+.patient-info{display:flex;gap:16px;align-items:center;font-size:13px;color:var(--text-secondary)}
+.patient-info .tag{background:var(--primary-light);color:var(--primary);padding:2px 8px;border-radius:4px;font-size:12px}
+
+.section-title{font-size:16px;font-weight:600;margin-bottom:14px;display:flex;align-items:center;gap:8px}
+.section-title::before{content:"";display:inline-block;width:4px;height:18px;background:var(--primary);border-radius:2px}
+
+.package-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px;margin-bottom:20px}
+.pkg-card{background:var(--card);border:2px solid var(--border);border-radius:var(--radius);padding:18px;cursor:pointer;transition:all .25s;position:relative;overflow:hidden}
+.pkg-card:hover{border-color:var(--primary);box-shadow:0 4px 16px rgba(26,111,181,.12);transform:translateY(-2px)}
+.pkg-card.selected{border-color:var(--primary);background:var(--primary-light)}
+.pkg-card.selected::after{content:"✓";position:absolute;top:8px;right:8px;width:24px;height:24px;background:var(--primary);color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:bold}
+.pkg-name{font-size:16px;font-weight:700;margin-bottom:8px;color:var(--text)}
+.pkg-items{font-size:12px;color:var(--text-secondary);margin-bottom:10px;line-height:1.8}
+.pkg-items span{display:inline-block;background:#f5f7fa;padding:1px 6px;border-radius:3px;margin:2px 4px 2px 0}
+.pkg-price-row{display:flex;align-items:baseline;gap:8px}
+.pkg-price{font-size:22px;font-weight:700;color:var(--danger)}
+.pkg-price .yen{font-size:14px}
+.pkg-original{font-size:13px;color:var(--text-light);text-decoration:line-through}
+.pkg-target{font-size:12px;color:var(--success);margin-top:6px;background:var(--success-light);display:inline-block;padding:1px 8px;border-radius:3px}
+
+.order-panel{background:var(--card);border-radius:var(--radius);padding:20px;box-shadow:var(--shadow);margin-bottom:20px}
+.order-panel table{width:100%;border-collapse:collapse;margin-bottom:12px}
+.order-panel th{text-align:left;font-weight:600;color:var(--text-secondary);font-size:13px;padding:8px 12px;border-bottom:2px solid var(--border)}
+.order-panel td{padding:8px 12px;border-bottom:1px solid var(--border);font-size:13px}
+.order-panel tr:last-child td{border-bottom:none}
+.order-panel .addon-row{background:var(--warning-light)}
+.item-name{font-weight:500}
+.item-tag{font-size:11px;padding:1px 6px;border-radius:3px;margin-left:6px}
+.item-tag.pkg{background:var(--primary-light);color:var(--primary)}
+.item-tag.addon{background:var(--warning-light);color:var(--warning)}
+.price-col{text-align:right;font-weight:600}
+.original-price{text-decoration:line-through;color:var(--text-light);font-size:12px;margin-right:6px;font-weight:400}
+
+.order-summary{display:flex;justify-content:flex-end;align-items:baseline;gap:16px;padding-top:12px;border-top:2px solid var(--border)}
+.total-label{font-size:14px;color:var(--text-secondary)}
+.total-amount{font-size:26px;font-weight:700;color:var(--danger)}
+.total-amount .yen{font-size:16px}
+.saved-amount{font-size:12px;color:var(--success)}
+
+.order-actions{display:flex;gap:12px;margin-top:16px;justify-content:flex-end}
+.btn{padding:10px 24px;border:none;border-radius:6px;font-size:14px;font-weight:600;cursor:pointer;transition:all .2s;display:inline-flex;align-items:center;gap:6px}
+.btn-primary{background:var(--primary);color:#fff}
+.btn-primary:hover{background:var(--primary-dark)}
+.btn-primary:disabled{background:#a0c8e8;cursor:not-allowed}
+.btn-success{background:var(--success);color:#fff}
+.btn-success:hover{background:#268a4d}
+.btn-warning{background:var(--warning);color:#fff}
+.btn-warning:hover{background:#d4942e}
+.btn-outline{background:#fff;color:var(--primary);border:2px solid var(--primary)}
+.btn-outline:hover{background:var(--primary-light)}
+.btn-sm{padding:6px 14px;font-size:12px}
+
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:200;align-items:center;justify-content:center}
+.modal-overlay.show{display:flex}
+.modal{background:var(--card);border-radius:12px;width:520px;max-width:92vw;max-height:90vh;overflow-y:auto;box-shadow:0 12px 40px rgba(0,0,0,.2);animation:modalIn .25s ease}
+@keyframes modalIn{from{opacity:0;transform:scale(.95) translateY(10px)}to{opacity:1;transform:scale(1) translateY(0)}}
+.modal-header{padding:18px 20px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center}
+.modal-header h3{font-size:16px;font-weight:700}
+.modal-close{background:none;border:none;font-size:20px;cursor:pointer;color:var(--text-secondary);padding:4px}
+.modal-close:hover{color:var(--text)}
+.modal-body{padding:20px}
+.modal-footer{padding:14px 20px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:10px}
+
+.addon-item{display:flex;align-items:center;padding:12px;border:2px solid var(--border);border-radius:8px;margin-bottom:10px;cursor:pointer;transition:all .2s}
+.addon-item:hover{border-color:var(--warning)}
+.addon-item.checked{border-color:var(--warning);background:var(--warning-light)}
+.addon-check{width:20px;height:20px;border:2px solid var(--border);border-radius:4px;margin-right:12px;display:flex;align-items:center;justify-content:center;transition:all .2s;flex-shrink:0}
+.addon-item.checked .addon-check{background:var(--warning);border-color:var(--warning);color:#fff}
+.addon-info{flex:1}
+.addon-name{font-weight:600;font-size:14px}
+.addon-desc{font-size:12px;color:var(--text-secondary)}
+.addon-price{font-weight:700;font-size:16px;color:var(--danger);white-space:nowrap}
+
+.form-group{margin-bottom:16px}
+.form-group label{display:block;font-weight:600;margin-bottom:6px;font-size:13px}
+.form-group select,.form-group input{width:100%;padding:8px 12px;border:2px solid var(--border);border-radius:6px;font-size:14px;outline:none;transition:border-color .2s}
+.form-group select:focus,.form-group input:focus{border-color:var(--primary)}
+
+.confirm-check{display:flex;align-items:center;gap:10px;padding:14px;background:var(--success-light);border-radius:8px;margin-top:14px}
+.confirm-check input[type=checkbox]{width:18px;height:18px;accent-color:var(--success)}
+.confirm-check label{font-size:13px;font-weight:600;color:var(--success);cursor:pointer}
+
+.sign-area{margin-top:12px;border:2px dashed var(--border);border-radius:8px;height:80px;display:flex;align-items:center;justify-content:center;color:var(--text-light);font-size:13px;cursor:pointer;position:relative;overflow:hidden}
+.sign-area.signed{border-color:var(--success);color:var(--success);background:var(--success-light)}
+.sign-area canvas{position:absolute;inset:0;width:100%;height:100%}
+
+.payment-methods{display:flex;gap:12px;margin-bottom:16px;flex-wrap:wrap}
+.pay-method{flex:1;min-width:120px;padding:14px;border:2px solid var(--border);border-radius:8px;cursor:pointer;text-align:center;transition:all .2s}
+.pay-method:hover{border-color:var(--primary)}
+.pay-method.selected{border-color:var(--primary);background:var(--primary-light)}
+.pay-method svg{margin-bottom:4px}
+.pay-method .method-name{font-weight:600;font-size:14px}
+.pay-method .method-desc{font-size:11px;color:var(--text-secondary);margin-top:2px}
+
+.receipt{background:#fffef5;border:1px dashed #d4c89a;border-radius:8px;padding:20px;font-family:"Courier New",monospace;max-width:380px;margin:0 auto}
+.receipt-header{text-align:center;border-bottom:1px dashed #d4c89a;padding-bottom:10px;margin-bottom:10px}
+.receipt-header h4{font-size:15px;margin-bottom:2px}
+.receipt-header p{font-size:11px;color:var(--text-secondary)}
+.receipt-line{display:flex;justify-content:space-between;font-size:12px;padding:2px 0}
+.receipt-divider{border:none;border-top:1px dashed #d4c89a;margin:8px 0}
+.receipt-section-title{font-weight:700;font-size:12px;margin:6px 0 4px;color:var(--primary)}
+.receipt-total{font-size:16px;font-weight:700}
+.receipt-footer{text-align:center;font-size:11px;color:var(--text-secondary);margin-top:10px;border-top:1px dashed #d4c89a;padding-top:8px}
+
+.record-table{width:100%;background:var(--card);border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow)}
+.record-table table{width:100%;border-collapse:collapse}
+.record-table th{background:#f5f7fa;font-weight:600;font-size:13px;padding:12px 16px;text-align:left;color:var(--text-secondary);border-bottom:2px solid var(--border)}
+.record-table td{padding:12px 16px;border-bottom:1px solid var(--border);font-size:13px}
+.record-table tr:hover td{background:#fafbfc}
+.badge{display:inline-block;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:600}
+.badge-success{background:var(--success-light);color:var(--success)}
+.badge-warning{background:var(--warning-light);color:var(--warning)}
+.badge-primary{background:var(--primary-light);color:var(--primary)}
+
+.empty-state{text-align:center;padding:60px 20px;color:var(--text-secondary)}
+.empty-state svg{margin-bottom:12px;opacity:.4}
+.empty-state p{font-size:14px}
+
+.insurance-mark{display:flex;align-items:center;gap:8px;margin-bottom:16px;padding:10px;background:var(--danger-light);border-radius:6px;font-size:13px}
+.insurance-mark label{display:flex;align-items:center;gap:6px;cursor:pointer;font-weight:500;color:var(--danger)}
+.insurance-mark input[type=checkbox]{accent-color:var(--danger);width:16px;height:16px}
+
+@media(max-width:640px){
+  .package-grid{grid-template-columns:1fr}
+  .payment-methods{flex-direction:column}
+  .patient-bar{flex-direction:column;align-items:stretch}
+}
+</style>
+</head>
+<body>
+
+<header class="header">
+  <h1>🦷 洁牙抛光套餐收银台</h1>
+  <nav class="header-nav">
+    <button class="active" onclick="switchPage('cashier')">套餐收银</button>
+    <button onclick="switchPage('records')">收费记录</button>
+  </nav>
+</header>
+
+<div id="page-cashier" class="page active">
+  <div class="patient-bar">
+    <label>👤 患者查询</label>
+    <div class="search-box">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+      <input type="text" id="patientSearch" placeholder="输入患者姓名或手机号搜索..." oninput="searchPatient(this.value)">
+    </div>
+    <div class="patient-info" id="patientInfo" style="display:none">
+      <span id="patientName"></span>
+      <span id="patientPhone"></span>
+      <span class="tag" id="patientTag"></span>
+    </div>
+  </div>
+
+  <div class="section-title">选择洁牙套餐</div>
+  <div class="package-grid" id="packageGrid"></div>
+
+  <div id="orderSection" style="display:none">
+    <div class="section-title">订单明细</div>
+    <div class="order-panel">
+      <table>
+        <thead>
+          <tr><th>项目</th><th style="text-align:right">原价</th><th style="text-align:right">优惠价</th></tr>
+        </thead>
+        <tbody id="orderItems"></tbody>
+      </table>
+      <div class="order-summary">
+        <span class="total-label">应收金额</span>
+        <span class="saved-amount" id="savedAmount"></span>
+        <span class="total-amount" id="totalAmount"></span>
+      </div>
+      <div class="order-actions">
+        <button class="btn btn-warning" onclick="openAddonModal()">➕ 加项</button>
+        <button class="btn btn-success" onclick="openPaymentModal()">💳 收款</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="page-records" class="page">
+  <div class="section-title">收费记录</div>
+  <div class="record-table">
+    <table>
+      <thead>
+        <tr><th>流水号</th><th>患者</th><th>套餐</th><th>加项</th><th>金额</th><th>支付方式</th><th>医保外自费</th><th>时间</th><th>操作</th></tr>
+      </thead>
+      <tbody id="recordBody"></tbody>
+    </table>
+  </div>
+  <div class="empty-state" id="emptyRecords">
+    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6"/><path d="M12 18v-6"/><path d="m9 15 3-3 3 3"/></svg>
+    <p>暂无收费记录</p>
+  </div>
+</div>
+
+<div class="modal-overlay" id="addonModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>加项确认</h3>
+      <button class="modal-close" onclick="closeModal('addonModal')">&times;</button>
+    </div>
+    <div class="modal-body">
+      <p style="margin-bottom:14px;font-size:13px;color:var(--text-secondary)">选择患者临时增加的项目，需注明医生建议来源并由患者确认</p>
+      <div id="addonList"></div>
+      <div class="form-group" style="margin-top:16px">
+        <label>医生建议来源</label>
+        <select id="doctorSource">
+          <option value="">请选择建议来源医生</option>
+          <option value="dr_wang">王医生 - 牙体牙髓科</option>
+          <option value="dr_li">李医生 - 牙周科</option>
+          <option value="dr_zhang">张医生 - 修复科</option>
+          <option value="dr_chen">陈医生 - 综合科</option>
+          <option value="dr_liu">刘医生 - 预防科</option>
+        </select>
+      </div>
+      <div class="confirm-check">
+        <input type="checkbox" id="patientConfirm">
+        <label for="patientConfirm">患者已知晓加项内容及费用，本人同意增加</label>
+      </div>
+      <div class="form-group" style="margin-top:14px">
+        <label>患者签字确认</label>
+        <div class="sign-area" id="signArea" onclick="startSign()">
+          点击此处手写签名
+          <canvas id="signCanvas"></canvas>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('addonModal')">取消</button>
+      <button class="btn btn-warning" onclick="confirmAddons()">确认加项</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="paymentModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>收款结算</h3>
+      <button class="modal-close" onclick="closeModal('paymentModal')">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label>支付方式</label>
+        <div class="payment-methods" id="paymentMethods">
+          <div class="pay-method" data-method="cash" onclick="selectPayMethod('cash')">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--success)" stroke-width="2"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="3"/></svg>
+            <div class="method-name">现金</div>
+            <div class="method-desc">现金支付</div>
+          </div>
+          <div class="pay-method" data-method="scan" onclick="selectPayMethod('scan')">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+            <div class="method-name">扫码</div>
+            <div class="method-desc">微信/支付宝</div>
+          </div>
+          <div class="pay-method" data-method="insurance" onclick="selectPayMethod('insurance')">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--warning)" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/></svg>
+            <div class="method-name">医保</div>
+            <div class="method-desc">医保卡结算</div>
+          </div>
+        </div>
+      </div>
+      <div class="insurance-mark">
+        <label>
+          <input type="checkbox" id="selfPayMark">
+          标记为医保外自费项目
+        </label>
+      </div>
+      <div class="form-group">
+        <label>收款金额</label>
+        <div style="font-size:28px;font-weight:700;color:var(--danger)" id="payAmount">¥0.00</div>
+      </div>
+      <div class="form-group">
+        <label>备注</label>
+        <input type="text" id="payRemark" placeholder="可选，输入备注信息...">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('paymentModal')">取消</button>
+      <button class="btn btn-success" onclick="confirmPayment()" id="confirmPayBtn" disabled>确认收款</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="receiptModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>收费小票</h3>
+      <button class="modal-close" onclick="closeModal('receiptModal')">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="receipt" id="receiptContent"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('receiptModal')">关闭</button>
+      <button class="btn btn-primary" onclick="window.print()">🖨️ 打印小票</button>
+    </div>
+  </div>
+</div>
+
+<script>
+var PACKAGES = [
+  {
+    id: 'basic',
+    name: '基础洁牙',
+    items: ['超声波洁治', '牙面抛光', '口腔检查'],
+    originalPrice: 280,
+    price: 198,
+    target: '常规洁牙人群',
+    color: '#1a6fb5'
+  },
+  {
+    id: 'comfort',
+    name: '舒适洁牙',
+    items: ['超声波洁治', '牙面抛光', '喷砂清洁', '牙周冲洗上药', '口腔检查'],
+    originalPrice: 480,
+    price: 328,
+    target: '烟茶渍/色素沉着者',
+    color: '#2e9e5a'
+  },
+  {
+    id: 'sandblast',
+    name: '喷砂抛光',
+    items: ['超声波洁治', '喷砂清洁', '精细抛光', '脱敏处理', '牙周冲洗上药', '口腔检查'],
+    originalPrice: 680,
+    price: 458,
+    target: '重度色素/美白需求者',
+    color: '#e6a23c'
+  },
+  {
+    id: 'periodontal',
+    name: '牙周维护',
+    items: ['龈下刮治', '根面平整', '喷砂抛光', '脱敏处理', '牙周冲洗上药', '口腔检查', '口腔卫生指导'],
+    originalPrice: 980,
+    price: 688,
+    target: '牙周炎患者/复诊维护',
+    color: '#e74c3c'
+  }
+];
+
+var ADDON_ITEMS = [
+  { id: 'polish', name: '精细抛光', desc: '特殊抛光膏精细打磨牙面', price: 80 },
+  { id: 'desensitize', name: '脱敏处理', desc: '牙本质敏感脱敏涂层', price: 60 },
+  { id: 'disposable', name: '一次性耗材包', desc: '一次性口镜/探针/托盘', price: 30 },
+  { id: 'fluoride', name: '涂氟保护', desc: '全口涂氟防龋处理', price: 50 }
+];
+
+var MOCK_PATIENTS = [
+  { name: '张明远', phone: '138****5621', tag: '老客户' },
+  { name: '李思涵', phone: '159****8834', tag: '首诊' },
+  { name: '王晓峰', phone: '186****2207', tag: '医保' },
+  { name: '赵雨桐', phone: '137****4490', tag: '老客户' },
+  { name: '陈佳怡', phone: '152****7718', tag: '首诊' }
+];
+
+var state = {
+  selectedPatient: null,
+  selectedPackage: null,
+  addons: [],
+  payMethod: null,
+  signed: false,
+  records: JSON.parse(localStorage.getItem('dental_records') || '[]')
+};
+
+function switchPage(page) {
+  document.querySelectorAll('.page').forEach(function(p) { p.classList.remove('active'); });
+  document.getElementById('page-' + page).classList.add('active');
+  document.querySelectorAll('.header-nav button').forEach(function(b) { b.classList.remove('active'); });
+  event.target.classList.add('active');
+  if (page === 'records') renderRecords();
+}
+
+function searchPatient(val) {
+  var info = document.getElementById('patientInfo');
+  if (!val.trim()) { info.style.display = 'none'; state.selectedPatient = null; return; }
+  var found = MOCK_PATIENTS.find(function(p) {
+    return p.name.includes(val) || p.phone.includes(val);
+  });
+  if (found) {
+    state.selectedPatient = found;
+    document.getElementById('patientName').textContent = found.name;
+    document.getElementById('patientPhone').textContent = found.phone;
+    document.getElementById('patientTag').textContent = found.tag;
+    info.style.display = 'flex';
+  } else {
+    info.style.display = 'none';
+    state.selectedPatient = null;
+  }
+}
+
+function renderPackages() {
+  var grid = document.getElementById('packageGrid');
+  grid.innerHTML = PACKAGES.map(function(pkg) {
+    return '<div class="pkg-card" data-id="' + pkg.id + '" onclick="selectPackage(\'' + pkg.id + '\')">' +
+      '<div class="pkg-name" style="color:' + pkg.color + '">' + pkg.name + '</div>' +
+      '<div class="pkg-items">' + pkg.items.map(function(item) { return '<span>' + item + '</span>'; }).join('') + '</div>' +
+      '<div class="pkg-price-row">' +
+        '<div class="pkg-price"><span class="yen">¥</span>' + pkg.price + '</div>' +
+        '<div class="pkg-original">¥' + pkg.originalPrice + '</div>' +
+      '</div>' +
+      '<div class="pkg-target">' + pkg.target + '</div>' +
+    '</div>';
+  }).join('');
+}
+
+function selectPackage(id) {
+  state.selectedPackage = PACKAGES.find(function(p) { return p.id === id; });
+  state.addons = [];
+  document.querySelectorAll('.pkg-card').forEach(function(c) {
+    c.classList.toggle('selected', c.dataset.id === id);
+  });
+  renderOrder();
+}
+
+function renderOrder() {
+  if (!state.selectedPackage) {
+    document.getElementById('orderSection').style.display = 'none';
+    return;
+  }
+  document.getElementById('orderSection').style.display = 'block';
+  var tbody = document.getElementById('orderItems');
+  var html = '';
+  var pkg = state.selectedPackage;
+  html += '<tr><td class="item-name">' + pkg.name + ' 套餐<span class="item-tag pkg">套餐</span></td>';
+  html += '<td class="price-col"><span class="original-price">¥' + pkg.originalPrice + '</span></td>';
+  html += '<td class="price-col" style="color:var(--danger)">¥' + pkg.price + '</td></tr>';
+
+  pkg.items.forEach(function(item) {
+    html += '<tr><td style="padding-left:28px;color:var(--text-secondary)">· ' + item + '</td>';
+    html += '<td></td><td></td></tr>';
+  });
+
+  var addonsTotal = 0;
+  state.addons.forEach(function(addon) {
+    var item = ADDON_ITEMS.find(function(a) { return a.id === addon; });
+    if (item) {
+      addonsTotal += item.price;
+      html += '<tr class="addon-row"><td class="item-name">' + item.name + '<span class="item-tag addon">加项</span></td>';
+      html += '<td class="price-col">¥' + item.price + '</td>';
+      html += '<td class="price-col" style="color:var(--danger)">¥' + item.price + '</td></tr>';
+    }
+  });
+
+  tbody.innerHTML = html;
+
+  var total = pkg.price + addonsTotal;
+  var saved = pkg.originalPrice - pkg.price;
+  document.getElementById('totalAmount').innerHTML = '<span class="yen">¥</span>' + total.toFixed(0);
+  document.getElementById('savedAmount').textContent = '已省¥' + saved;
+}
+
+function openAddonModal() {
+  if (!state.selectedPackage) return;
+  var list = document.getElementById('addonList');
+  list.innerHTML = ADDON_ITEMS.map(function(item) {
+    var checked = state.addons.indexOf(item.id) >= 0 ? ' checked' : '';
+    return '<div class="addon-item' + checked + '" data-id="' + item.id + '" onclick="toggleAddon(this,\'' + item.id + '\')">' +
+      '<div class="addon-check">' + (checked ? '✓' : '') + '</div>' +
+      '<div class="addon-info"><div class="addon-name">' + item.name + '</div><div class="addon-desc">' + item.desc + '</div></div>' +
+      '<div class="addon-price">¥' + item.price + '</div>' +
+    '</div>';
+  }).join('');
+  document.getElementById('doctorSource').value = '';
+  document.getElementById('patientConfirm').checked = false;
+  state.signed = false;
+  var signArea = document.getElementById('signArea');
+  signArea.classList.remove('signed');
+  signArea.querySelector('span, text') && (signArea.firstChild.textContent = '点击此处手写签名');
+  clearSignCanvas();
+  openModal('addonModal');
+}
+
+function toggleAddon(el, id) {
+  var idx = state.addons.indexOf(id);
+  if (idx >= 0) {
+    state.addons.splice(idx, 1);
+    el.classList.remove('checked');
+    el.querySelector('.addon-check').textContent = '';
+  } else {
+    state.addons.push(id);
+    el.classList.add('checked');
+    el.querySelector('.addon-check').textContent = '✓';
+  }
+}
+
+function confirmAddons() {
+  if (state.addons.length === 0) { closeModal('addonModal'); return; }
+  var doctor = document.getElementById('doctorSource').value;
+  if (!doctor) { showToast('请选择医生建议来源', 'warning'); return; }
+  if (!document.getElementById('patientConfirm').checked) { showToast('请确认患者已同意加项', 'warning'); return; }
+  if (!state.signed) { showToast('请完成患者签字确认', 'warning'); return; }
+  renderOrder();
+  closeModal('addonModal');
+  showToast('加项已确认', 'success');
+}
+
+var signCtx = null;
+var isDrawing = false;
+
+function startSign() {
+  var canvas = document.getElementById('signCanvas');
+  var area = document.getElementById('signArea');
+  if (!signCtx) {
+    canvas.width = area.offsetWidth;
+    canvas.height = area.offsetHeight;
+    signCtx = canvas.getContext('2d');
+    signCtx.strokeStyle = '#303133';
+    signCtx.lineWidth = 2;
+    signCtx.lineCap = 'round';
+    canvas.addEventListener('mousedown', function(e) {
+      isDrawing = true;
+      signCtx.beginPath();
+      signCtx.moveTo(e.offsetX, e.offsetY);
+    });
+    canvas.addEventListener('mousemove', function(e) {
+      if (!isDrawing) return;
+      signCtx.lineTo(e.offsetX, e.offsetY);
+      signCtx.stroke();
+    });
+    canvas.addEventListener('mouseup', function() {
+      isDrawing = false;
+      state.signed = true;
+      area.classList.add('signed');
+    });
+    canvas.addEventListener('mouseleave', function() {
+      isDrawing = false;
+    });
+  }
+}
+
+function clearSignCanvas() {
+  var canvas = document.getElementById('signCanvas');
+  if (canvas.width) {
+    var ctx = canvas.getContext('2d');
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+  }
+}
+
+function openPaymentModal() {
+  if (!state.selectedPackage) return;
+  if (!state.selectedPatient) { showToast('请先查询并选择患者', 'warning'); return; }
+  state.payMethod = null;
+  document.querySelectorAll('.pay-method').forEach(function(m) { m.classList.remove('selected'); });
+  document.getElementById('selfPayMark').checked = false;
+  document.getElementById('payRemark').value = '';
+  document.getElementById('confirmPayBtn').disabled = true;
+  var total = calcTotal();
+  document.getElementById('payAmount').textContent = '¥' + total.toFixed(2);
+  openModal('paymentModal');
+}
+
+function selectPayMethod(method) {
+  state.payMethod = method;
+  document.querySelectorAll('.pay-method').forEach(function(m) {
+    m.classList.toggle('selected', m.dataset.method === method);
+  });
+  document.getElementById('confirmPayBtn').disabled = false;
+}
+
+function calcTotal() {
+  var total = state.selectedPackage ? state.selectedPackage.price : 0;
+  state.addons.forEach(function(id) {
+    var item = ADDON_ITEMS.find(function(a) { return a.id === id; });
+    if (item) total += item.price;
+  });
+  return total;
+}
+
+function confirmPayment() {
+  if (!state.payMethod) { showToast('请选择支付方式', 'warning'); return; }
+  var total = calcTotal();
+  var now = new Date();
+  var record = {
+    id: 'DJ' + now.getFullYear() + String(now.getMonth() + 1).padStart(2, '0') + String(now.getDate()).padStart(2, '0') + String(Math.floor(Math.random() * 9000) + 1000),
+    patient: state.selectedPatient.name,
+    patientPhone: state.selectedPatient.phone,
+    packageId: state.selectedPackage.id,
+    packageName: state.selectedPackage.name,
+    packageItems: state.selectedPackage.items.slice(),
+    packageOriginalPrice: state.selectedPackage.originalPrice,
+    packagePrice: state.selectedPackage.price,
+    addons: state.addons.map(function(id) {
+      var item = ADDON_ITEMS.find(function(a) { return a.id === id; });
+      return item ? { name: item.name, price: item.price } : null;
+    }).filter(Boolean),
+    total: total,
+    payMethod: state.payMethod,
+    selfPay: document.getElementById('selfPayMark').checked,
+    remark: document.getElementById('payRemark').value,
+    time: now.toLocaleString('zh-CN'),
+    doctorSource: document.getElementById('doctorSource').value
+  };
+  state.records.unshift(record);
+  localStorage.setItem('dental_records', JSON.stringify(state.records));
+  closeModal('paymentModal');
+  showReceipt(record);
+  resetCashier();
+}
+
+function showReceipt(record) {
+  var methodNames = { cash: '现金', scan: '扫码支付', insurance: '医保' };
+  var html = '<div class="receipt-header">' +
+    '<h4>🦷 洁牙抛光套餐收费凭证</h4>' +
+    '<p>流水号：' + record.id + '</p>' +
+  '</div>';
+  html += '<div class="receipt-line"><span>患者</span><span>' + record.patient + '</span></div>';
+  html += '<div class="receipt-line"><span>时间</span><span>' + record.time + '</span></div>';
+  html += '<hr class="receipt-divider">';
+  html += '<div class="receipt-section-title">✅ 洁牙抛光套餐已含项目</div>';
+  record.packageItems.forEach(function(item) {
+    html += '<div class="receipt-line"><span>· ' + item + '</span><span></span></div>';
+  });
+  html += '<div class="receipt-line"><span>' + record.packageName + '套餐</span><span>¥' + record.packagePrice + '</span></div>';
+  if (record.addons.length > 0) {
+    html += '<hr class="receipt-divider">';
+    html += '<div class="receipt-section-title">➕ 加项</div>';
+    record.addons.forEach(function(a) {
+      html += '<div class="receipt-line"><span>' + a.name + '</span><span>¥' + a.price + '</span></div>';
+    });
+  }
+  html += '<hr class="receipt-divider">';
+  html += '<div class="receipt-line receipt-total"><span>合计</span><span>¥' + record.total.toFixed(2) + '</span></div>';
+  html += '<div class="receipt-line"><span>支付方式</span><span>' + (methodNames[record.payMethod] || record.payMethod) + '</span></div>';
+  if (record.selfPay) {
+    html += '<div class="receipt-line" style="color:var(--danger)"><span>医保外自费</span><span>是</span></div>';
+  }
+  if (record.remark) {
+    html += '<div class="receipt-line"><span>备注</span><span>' + record.remark + '</span></div>';
+  }
+  html += '<div class="receipt-footer">此凭证为收费依据，请妥善保管<br>如有疑问请联系前台</div>';
+  document.getElementById('receiptContent').innerHTML = html;
+  openModal('receiptModal');
+}
+
+function resetCashier() {
+  state.selectedPackage = null;
+  state.addons = [];
+  document.querySelectorAll('.pkg-card').forEach(function(c) { c.classList.remove('selected'); });
+  document.getElementById('orderSection').style.display = 'none';
+}
+
+function renderRecords() {
+  var tbody = document.getElementById('recordBody');
+  var empty = document.getElementById('emptyRecords');
+  if (state.records.length === 0) {
+    tbody.innerHTML = '';
+    empty.style.display = 'block';
+    return;
+  }
+  empty.style.display = 'none';
+  var methodNames = { cash: '现金', scan: '扫码', insurance: '医保' };
+  tbody.innerHTML = state.records.map(function(r, idx) {
+    var addons = r.addons.map(function(a) { return a.name; }).join('、') || '-';
+    var methodBadge = r.payMethod === 'cash' ? 'badge-success' : r.payMethod === 'scan' ? 'badge-primary' : 'badge-warning';
+    return '<tr>' +
+      '<td>' + r.id + '</td>' +
+      '<td>' + r.patient + '</td>' +
+      '<td>' + r.packageName + '</td>' +
+      '<td>' + addons + '</td>' +
+      '<td style="font-weight:700;color:var(--danger)">¥' + r.total.toFixed(0) + '</td>' +
+      '<td><span class="badge ' + methodBadge + '">' + (methodNames[r.payMethod] || r.payMethod) + '</span></td>' +
+      '<td>' + (r.selfPay ? '<span class="badge badge-warning">是</span>' : '否') + '</td>' +
+      '<td style="color:var(--text-secondary);font-size:12px">' + r.time + '</td>' +
+      '<td><button class="btn btn-sm btn-outline" onclick="viewReceipt(' + idx + ')">小票</button></td>' +
+    '</tr>';
+  }).join('');
+}
+
+function viewReceipt(idx) {
+  showReceipt(state.records[idx]);
+}
+
+function openModal(id) {
+  document.getElementById(id).classList.add('show');
+}
+
+function closeModal(id) {
+  document.getElementById(id).classList.remove('show');
+}
+
+var toastTimer = null;
+function showToast(msg, type) {
+  var existing = document.querySelector('.toast');
+  if (existing) existing.remove();
+  clearTimeout(toastTimer);
+  var colors = { success: 'var(--success)', warning: 'var(--warning)', error: 'var(--danger)' };
+  var toast = document.createElement('div');
+  toast.className = 'toast';
+  toast.textContent = msg;
+  toast.style.cssText = 'position:fixed;top:72px;left:50%;transform:translateX(-50%);padding:10px 24px;border-radius:6px;color:#fff;font-size:14px;font-weight:600;z-index:999;background:' + (colors[type] || colors.success) + ';box-shadow:0 4px 12px rgba(0,0,0,.15);animation:modalIn .25s ease';
+  document.body.appendChild(toast);
+  toastTimer = setTimeout(function() { toast.remove(); }, 2500);
+}
+
+renderPackages();
+</script>
+</body>
+</html>
