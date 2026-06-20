@@ -220,6 +220,25 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hira
 .filter-bar .btn-export{margin-left:auto;padding:6px 14px;font-size:12px;background:var(--success);color:#fff;border:none;border-radius:6px;cursor:pointer;font-weight:600;transition:all .2s;display:inline-flex;align-items:center;gap:4px}
 .filter-bar .btn-export:hover{background:#268a4d}
 
+.shift-summary{background:var(--card);border-radius:var(--radius);padding:20px;font-size:13px;max-width:440px;margin:0 auto}
+.shift-summary .shift-title{text-align:center;font-size:16px;font-weight:700;margin-bottom:12px;padding-bottom:10px;border-bottom:2px dashed var(--border)}
+.shift-row{display:flex;justify-content:space-between;padding:4px 0}
+.shift-row.highlight{font-size:16px;font-weight:700;color:var(--danger);border-top:2px solid var(--border);padding-top:8px;margin-top:6px}
+.shift-section{font-weight:700;font-size:12px;color:var(--primary);margin:8px 0 4px}
+.shift-void-item,.shift-refund-item{font-size:11px;color:var(--text-secondary);padding:2px 0 2px 12px}
+
+.shift-card{background:var(--card);border-radius:var(--radius);padding:16px 20px;margin-bottom:12px;box-shadow:var(--shadow);cursor:pointer;transition:all .2s;border-left:4px solid var(--primary)}
+.shift-card:hover{box-shadow:0 4px 16px rgba(0,0,0,.12);transform:translateY(-1px)}
+.shift-card-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+.shift-card-header .shift-id{font-weight:700;font-size:14px}
+.shift-card-header .shift-time{font-size:12px;color:var(--text-secondary)}
+.shift-card-body{display:flex;gap:20px;flex-wrap:wrap;font-size:13px}
+.shift-card-body .shift-stat{display:flex;gap:4px;align-items:baseline}
+.shift-card-body .shift-stat .label{color:var(--text-secondary)}
+.shift-card-body .shift-stat .value{font-weight:700;color:var(--danger)}
+
+.recon-panel .recon-actions{margin-top:12px;display:flex;justify-content:flex-end;gap:8px}
+
 @media(max-width:640px){
   .package-grid{grid-template-columns:1fr}
   .payment-methods{flex-direction:column}
@@ -228,6 +247,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hira
   .filter-bar input,.filter-bar select{width:100%}
   .recon-cards{grid-template-columns:1fr 1fr}
   .recon-net{flex-direction:column;text-align:center;gap:8px}
+  .shift-card-body{flex-direction:column;gap:8px}
 }
 </style>
 </head>
@@ -238,6 +258,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hira
   <nav class="header-nav">
     <button class="active" onclick="switchPage('cashier')">套餐收银</button>
     <button onclick="switchPage('records')">收费记录</button>
+    <button onclick="switchPage('shifts')">交班记录</button>
   </nav>
 </header>
 
@@ -322,6 +343,9 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hira
     </div>
     <div class="recon-cards" id="reconCards"></div>
     <div class="recon-net" id="reconNet"></div>
+    <div class="recon-actions">
+      <button class="btn btn-sm btn-primary" onclick="openShiftModal()">📋 生成交班单</button>
+    </div>
   </div>
   <div class="record-table">
     <table>
@@ -334,6 +358,15 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hira
   <div class="empty-state" id="emptyRecords">
     <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6"/><path d="M12 18v-6"/><path d="m9 15 3-3 3 3"/></svg>
     <p>暂无收费记录</p>
+  </div>
+</div>
+
+<div id="page-shifts" class="page">
+  <div class="section-title">交班记录</div>
+  <div id="shiftList"></div>
+  <div class="empty-state" id="emptyShifts">
+    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6"/><path d="M12 18v-6"/><path d="m9 15 3-3 3 3"/></svg>
+    <p>暂无交班记录</p>
   </div>
 </div>
 
@@ -436,8 +469,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hira
     </div>
     <div class="modal-footer">
       <button class="btn btn-outline" onclick="closeModal('receiptModal')">关闭</button>
-      <button class="btn btn-warning" onclick="reprintReceipt()">🔄 重打小票</button>
-      <button class="btn btn-primary" onclick="printAndRecord()">🖨️ 打印</button>
+      <button class="btn btn-warning" onclick="openPrintReasonModal('reprint')">🔄 重打小票</button>
+      <button class="btn btn-primary" onclick="openPrintReasonModal('print')">🖨️ 打印</button>
     </div>
   </div>
 </div>
@@ -500,6 +533,73 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hira
     <div class="modal-footer">
       <button class="btn btn-outline" onclick="closeModal('voidModal')">取消</button>
       <button class="btn btn-danger" id="confirmVoidBtn" onclick="confirmVoid()">确认作废</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="shiftModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>生成交班单</h3>
+      <button class="modal-close" onclick="closeModal('shiftModal')">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label>收款员</label>
+        <input type="text" id="shiftCashier" placeholder="请输入收款员姓名">
+      </div>
+      <div class="form-group">
+        <label>班次</label>
+        <select id="shiftPeriod">
+          <option value="早班">早班 (8:00-12:00)</option>
+          <option value="午班">午班 (12:00-18:00)</option>
+          <option value="晚班">晚班 (18:00-22:00)</option>
+          <option value="全天">全天</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>交班汇总预览</label>
+        <div id="shiftPreview" class="shift-summary"></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('shiftModal')">取消</button>
+      <button class="btn btn-primary" onclick="confirmShift()">确认交班</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="shiftDetailModal">
+  <div class="modal" style="width:640px">
+    <div class="modal-header">
+      <h3>交班单详情</h3>
+      <button class="modal-close" onclick="closeModal('shiftDetailModal')">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div id="shiftDetailContent"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('shiftDetailModal')">关闭</button>
+      <button class="btn btn-success" onclick="exportShiftRecords()">📥 导出本班次流水</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="printReasonModal">
+  <div class="modal" style="width:400px">
+    <div class="modal-header">
+      <h3>补打原因</h3>
+      <button class="modal-close" onclick="closeModal('printReasonModal')">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label>请填写补打/重打原因</label>
+        <input type="text" id="printReason" placeholder="如：原票遗失、打印机故障等">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('printReasonModal')">取消</button>
+      <button class="btn btn-primary" onclick="confirmPrintWithReason()">确认打印</button>
     </div>
   </div>
 </div>
@@ -577,7 +677,10 @@ var state = {
   payMethod: null,
   signed: false,
   records: JSON.parse(localStorage.getItem('dental_records') || '[]'),
-  allPatients: JSON.parse(localStorage.getItem('dental_patients') || '[]').concat(MOCK_PATIENTS)
+  allPatients: JSON.parse(localStorage.getItem('dental_patients') || '[]').concat(MOCK_PATIENTS),
+  shifts: JSON.parse(localStorage.getItem('dental_shifts') || '[]'),
+  currentShiftViewIdx: -1,
+  pendingPrintType: ''
 };
 
 function switchPage(page) {
@@ -586,6 +689,7 @@ function switchPage(page) {
   document.querySelectorAll('.header-nav button').forEach(function(b) { b.classList.remove('active'); });
   event.target.classList.add('active');
   if (page === 'records') renderRecords();
+  if (page === 'shifts') renderShifts();
 }
 
 document.addEventListener('click', function(e) {
@@ -989,17 +1093,30 @@ function confirmPayment() {
 
 var currentReceiptIdx = -1;
 
-function printAndRecord() {
-  window.print();
-  recordPrint();
+function openPrintReasonModal(type) {
+  state.pendingPrintType = type;
+  var record = state.records[currentReceiptIdx];
+  if (!record) return;
+  var isFirst = !record.printHistory || record.printHistory.length === 0;
+  if (isFirst) {
+    doRecordPrint('首次打印', '');
+    window.print();
+    return;
+  }
+  document.getElementById('printReason').value = '';
+  openModal('printReasonModal');
 }
 
-function reprintReceipt() {
-  recordPrint();
+function confirmPrintWithReason() {
+  var reason = document.getElementById('printReason').value.trim();
+  if (!reason) { showToast('请填写补打/重打原因', 'warning'); return; }
+  closeModal('printReasonModal');
+  var printType = state.pendingPrintType === 'reprint' ? '重打' : '补打';
+  doRecordPrint(printType, reason);
   window.print();
 }
 
-function recordPrint() {
+function doRecordPrint(type, reason) {
   if (currentReceiptIdx < 0) return;
   var record = state.records[currentReceiptIdx];
   if (!record) return;
@@ -1007,7 +1124,8 @@ function recordPrint() {
   record.printHistory.push({
     printNo: record.printHistory.length + 1,
     time: new Date().toLocaleString('zh-CN'),
-    type: record.printHistory.length === 0 ? '首次打印' : '补打'
+    type: type,
+    reason: reason || ''
   });
   localStorage.setItem('dental_records', JSON.stringify(state.records));
   showReceipt(record);
@@ -1023,11 +1141,14 @@ function showReceipt(record) {
     html += '<div class="receipt-print-info">';
     html += '<span class="print-badge">第' + lastPrint.printNo + '次打印</span> ';
     html += lastPrint.type + ' · ' + lastPrint.time;
+    if (lastPrint.reason) html += ' · 原因：' + lastPrint.reason;
     if (lastPrint.printNo > 1) {
-      html += '<br>历史打印：';
+      html += '<br>打印记录：';
       record.printHistory.forEach(function(p, i) {
         if (i > 0) html += '；';
-        html += '第' + p.printNo + '次(' + p.type + ' ' + p.time + ')';
+        html += '第' + p.printNo + '次(' + p.type;
+        if (p.reason) html += '：' + p.reason;
+        html += ')';
       });
     }
     html += '</div>';
@@ -1230,10 +1351,29 @@ function viewReceipt(idx) {
   showReceipt(state.records[idx]);
 }
 
+function getReconDateRecords() {
+  var targetDate = currentFilters.date;
+  if (!targetDate) {
+    var today = new Date();
+    targetDate = today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0') + '-' + String(today.getDate()).padStart(2, '0');
+  }
+  return state.records.filter(function(r) {
+    var recDate = extractDateStr(r.time);
+    return recDate === targetDate;
+  });
+}
+
 function renderReconPanel(filtered) {
-  var today = new Date();
-  var todayStr = today.getFullYear() + '/' + String(today.getMonth() + 1).padStart(2, '0') + '/' + String(today.getDate()).padStart(2, '0');
-  document.getElementById('reconDate').textContent = '统计日期：' + todayStr;
+  var targetDate = currentFilters.date;
+  if (!targetDate) {
+    var today = new Date();
+    targetDate = today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0') + '-' + String(today.getDate()).padStart(2, '0');
+  }
+  var dateParts = targetDate.split('-');
+  var displayDate = dateParts[0] + '/' + dateParts[1] + '/' + dateParts[2];
+  document.getElementById('reconDate').textContent = '统计日期：' + displayDate;
+
+  var reconRecords = getReconDateRecords();
 
   var methods = ['cash', 'scan', 'insurance'];
   var methodLabels = { cash: '现金', scan: '扫码', insurance: '医保' };
@@ -1244,17 +1384,17 @@ function renderReconPanel(filtered) {
     stats[m] = { count: 0, total: 0, voidCount: 0, voidAmount: 0, refundCount: 0, refundAmount: 0 };
   });
 
-  var totalGross = 0;
+  var totalNormal = 0;
   var totalVoid = 0;
   var totalRefund = 0;
 
-  filtered.forEach(function(r) {
+  reconRecords.forEach(function(r) {
     var s = stats[r.payMethod];
     if (!s) return;
     if (r.status === 'normal') {
       s.count++;
       s.total += r.total;
-      totalGross += r.total;
+      totalNormal += r.total;
     } else if (r.status === 'voided') {
       s.voidCount++;
       s.voidAmount += r.total;
@@ -1272,19 +1412,24 @@ function renderReconPanel(filtered) {
       '<div class="recon-label">' + methodLabels[m] + '</div>' +
       '<div class="recon-count">' + s.count + ' 笔</div>' +
       '<div class="recon-amount"><span class="yen">¥</span>' + s.total.toFixed(2) + '</div>' +
-      (s.voidCount > 0 ? '<div style="font-size:11px;color:var(--danger);margin-top:2px">作废' + s.voidCount + '笔 -¥' + s.voidAmount.toFixed(2) + '</div>' : '') +
+      (s.voidCount > 0 ? '<div style="font-size:11px;color:var(--danger);margin-top:2px">作废' + s.voidCount + '笔 ¥' + s.voidAmount.toFixed(2) + '</div>' : '') +
       (s.refundCount > 0 ? '<div style="font-size:11px;color:var(--warning);margin-top:2px">退款' + s.refundCount + '笔 -¥' + s.refundAmount.toFixed(2) + '</div>' : '') +
     '</div>';
   }).join('');
   document.getElementById('reconCards').innerHTML = cardsHtml;
 
-  var net = totalGross - totalVoid - totalRefund;
-  var netDetail = '总收费' + filtered.filter(function(r) { return r.status === 'normal'; }).length + '笔 ¥' + totalGross.toFixed(2);
-  if (totalVoid > 0) netDetail += ' · 作废' + filtered.filter(function(r) { return r.status === 'voided'; }).length + '笔 -¥' + totalVoid.toFixed(2);
-  if (totalRefund > 0) netDetail += ' · 退款' + filtered.filter(function(r) { return r.status === 'refunded'; }).length + '笔 -¥' + totalRefund.toFixed(2);
+  var net = totalNormal - totalRefund;
+  if (net < 0) net = 0;
+  var normalCount = reconRecords.filter(function(r) { return r.status === 'normal'; }).length;
+  var voidCount = reconRecords.filter(function(r) { return r.status === 'voided'; }).length;
+  var refundCount = reconRecords.filter(function(r) { return r.status === 'refunded'; }).length;
+
+  var netDetail = '正常收款' + normalCount + '笔 ¥' + totalNormal.toFixed(2);
+  if (voidCount > 0) netDetail += ' · 作废' + voidCount + '笔 ¥' + totalVoid.toFixed(2) + '(不计入)';
+  if (refundCount > 0) netDetail += ' · 退款' + refundCount + '笔 -¥' + totalRefund.toFixed(2);
 
   document.getElementById('reconNet').innerHTML =
-    '<div><div class="recon-net-label">净收款</div><div class="recon-net-detail">' + netDetail + '</div></div>' +
+    '<div><div class="recon-net-label">应交金额</div><div class="recon-net-detail">' + netDetail + '</div></div>' +
     '<div class="recon-net-amount"><span class="yen">¥</span>' + net.toFixed(2) + '</div>';
 }
 
@@ -1349,6 +1494,250 @@ function exportRecords() {
   link.click();
   URL.revokeObjectURL(url);
   showToast('已导出' + filtered.length + '条记录', 'success');
+}
+
+function buildShiftStats(records) {
+  var methods = ['cash', 'scan', 'insurance'];
+  var methodLabels = { cash: '现金', scan: '扫码', insurance: '医保' };
+  var stats = {};
+  methods.forEach(function(m) {
+    stats[m] = { count: 0, total: 0, voidCount: 0, voidAmount: 0, refundCount: 0, refundAmount: 0 };
+  });
+  var totalNormal = 0, totalVoid = 0, totalRefund = 0;
+  var voidDetails = [], refundDetails = [];
+
+  records.forEach(function(r) {
+    var s = stats[r.payMethod];
+    if (!s) return;
+    if (r.status === 'normal') {
+      s.count++;
+      s.total += r.total;
+      totalNormal += r.total;
+    } else if (r.status === 'voided') {
+      s.voidCount++;
+      s.voidAmount += r.total;
+      totalVoid += r.total;
+      var reason = '';
+      if (r.statusHistory) r.statusHistory.forEach(function(h) { if (h.status !== 'normal') reason = h.reason; });
+      voidDetails.push({ id: r.id, patient: r.patient, amount: r.total, reason: reason });
+    } else if (r.status === 'refunded') {
+      s.refundCount++;
+      s.refundAmount += r.total;
+      totalRefund += r.total;
+      var reason2 = '';
+      if (r.statusHistory) r.statusHistory.forEach(function(h) { if (h.status !== 'normal') reason2 = h.reason; });
+      refundDetails.push({ id: r.id, patient: r.patient, amount: r.total, reason: reason2 });
+    }
+  });
+
+  var net = totalNormal - totalRefund;
+  if (net < 0) net = 0;
+
+  return {
+    methods: methods, methodLabels: methodLabels, stats: stats,
+    totalNormal: totalNormal, totalVoid: totalVoid, totalRefund: totalRefund,
+    net: net, voidDetails: voidDetails, refundDetails: refundDetails,
+    normalCount: records.filter(function(r) { return r.status === 'normal'; }).length,
+    voidCount: records.filter(function(r) { return r.status === 'voided'; }).length,
+    refundCount: records.filter(function(r) { return r.status === 'refunded'; }).length,
+    recordIds: records.map(function(r) { return r.id; })
+  };
+}
+
+function renderShiftSummaryHtml(shiftData, cashier, period, dateStr) {
+  var s = shiftData;
+  var html = '<div class="shift-title">交班汇总单</div>';
+  html += '<div class="shift-row"><span>收款员</span><span>' + cashier + '</span></div>';
+  html += '<div class="shift-row"><span>班次</span><span>' + period + '</span></div>';
+  html += '<div class="shift-row"><span>日期</span><span>' + dateStr + '</span></div>';
+  html += '<hr class="receipt-divider">';
+
+  s.methods.forEach(function(m) {
+    var ms = s.stats[m];
+    html += '<div class="shift-section">' + s.methodLabels[m] + '</div>';
+    html += '<div class="shift-row"><span>正常收款</span><span>' + ms.count + '笔 ¥' + ms.total.toFixed(2) + '</span></div>';
+    if (ms.voidCount > 0) html += '<div class="shift-row" style="color:var(--danger)"><span>作废</span><span>' + ms.voidCount + '笔 ¥' + ms.voidAmount.toFixed(2) + '</span></div>';
+    if (ms.refundCount > 0) html += '<div class="shift-row" style="color:var(--warning)"><span>退款</span><span>' + ms.refundCount + '笔 -¥' + ms.refundAmount.toFixed(2) + '</span></div>';
+  });
+
+  html += '<hr class="receipt-divider">';
+  html += '<div class="shift-row"><span>正常收款合计</span><span>¥' + s.totalNormal.toFixed(2) + '</span></div>';
+  if (s.voidCount > 0) html += '<div class="shift-row" style="color:var(--text-secondary)"><span>作废(不计入)</span><span>' + s.voidCount + '笔 ¥' + s.totalVoid.toFixed(2) + '</span></div>';
+  if (s.refundCount > 0) html += '<div class="shift-row" style="color:var(--warning)"><span>退款扣除</span><span>-¥' + s.totalRefund.toFixed(2) + '</span></div>';
+  html += '<div class="shift-row highlight"><span>应交金额</span><span>¥' + s.net.toFixed(2) + '</span></div>';
+
+  if (s.voidDetails.length > 0) {
+    html += '<hr class="receipt-divider">';
+    html += '<div class="shift-section">作废明细</div>';
+    s.voidDetails.forEach(function(d) {
+      html += '<div class="shift-void-item">' + d.id + ' ' + d.patient + ' ¥' + d.amount.toFixed(2) + ' - ' + d.reason + '</div>';
+    });
+  }
+  if (s.refundDetails.length > 0) {
+    html += '<hr class="receipt-divider">';
+    html += '<div class="shift-section">退款明细</div>';
+    s.refundDetails.forEach(function(d) {
+      html += '<div class="shift-refund-item">' + d.id + ' ' + d.patient + ' ¥' + d.amount.toFixed(2) + ' - ' + d.reason + '</div>';
+    });
+  }
+
+  return html;
+}
+
+function openShiftModal() {
+  var reconRecords = getReconDateRecords();
+  if (reconRecords.length === 0) { showToast('当天无收费记录，无法生成交班单', 'warning'); return; }
+  document.getElementById('shiftCashier').value = '';
+  var hour = new Date().getHours();
+  var periodEl = document.getElementById('shiftPeriod');
+  if (hour < 12) periodEl.value = '早班';
+  else if (hour < 18) periodEl.value = '午班';
+  else periodEl.value = '晚班';
+
+  var shiftData = buildShiftStats(reconRecords);
+  var targetDate = currentFilters.date;
+  if (!targetDate) {
+    var today = new Date();
+    targetDate = today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0') + '-' + String(today.getDate()).padStart(2, '0');
+  }
+  state._pendingShiftData = shiftData;
+  state._pendingShiftDate = targetDate;
+  document.getElementById('shiftPreview').innerHTML = renderShiftSummaryHtml(shiftData, '（待填写）', periodEl.value, targetDate);
+  openModal('shiftModal');
+}
+
+function confirmShift() {
+  var cashier = document.getElementById('shiftCashier').value.trim();
+  if (!cashier) { showToast('请输入收款员姓名', 'warning'); return; }
+  var period = document.getElementById('shiftPeriod').value;
+  var shiftData = state._pendingShiftData;
+  var dateStr = state._pendingShiftDate;
+
+  var now = new Date();
+  var shift = {
+    id: 'JB' + now.getFullYear() + String(now.getMonth() + 1).padStart(2, '0') + String(now.getDate()).padStart(2, '0') + String(Math.floor(Math.random() * 9000) + 1000),
+    cashier: cashier,
+    period: period,
+    date: dateStr,
+    createdAt: now.toLocaleString('zh-CN'),
+    stats: {
+      totalNormal: shiftData.totalNormal,
+      totalVoid: shiftData.totalVoid,
+      totalRefund: shiftData.totalRefund,
+      net: shiftData.net,
+      normalCount: shiftData.normalCount,
+      voidCount: shiftData.voidCount,
+      refundCount: shiftData.refundCount
+    },
+    methodStats: {},
+    voidDetails: shiftData.voidDetails,
+    refundDetails: shiftData.refundDetails,
+    recordIds: shiftData.recordIds,
+    summaryHtml: renderShiftSummaryHtml(shiftData, cashier, period, dateStr)
+  };
+
+  shiftData.methods.forEach(function(m) {
+    shift.methodStats[m] = shiftData.stats[m];
+  });
+
+  state.shifts.unshift(shift);
+  localStorage.setItem('dental_shifts', JSON.stringify(state.shifts));
+  closeModal('shiftModal');
+  showToast('交班单已生成：' + shift.id, 'success');
+}
+
+function renderShifts() {
+  var list = document.getElementById('shiftList');
+  var empty = document.getElementById('emptyShifts');
+  if (state.shifts.length === 0) {
+    list.innerHTML = '';
+    empty.style.display = 'block';
+    return;
+  }
+  empty.style.display = 'none';
+  list.innerHTML = state.shifts.map(function(s, idx) {
+    return '<div class="shift-card" onclick="viewShiftDetail(' + idx + ')">' +
+      '<div class="shift-card-header">' +
+        '<span class="shift-id">' + s.id + '</span>' +
+        '<span class="shift-time">' + s.createdAt + '</span>' +
+      '</div>' +
+      '<div class="shift-card-body">' +
+        '<div class="shift-stat"><span class="label">收款员</span><span class="value" style="color:var(--text)">' + s.cashier + '</span></div>' +
+        '<div class="shift-stat"><span class="label">班次</span><span class="value" style="color:var(--text)">' + s.period + '</span></div>' +
+        '<div class="shift-stat"><span class="label">正常</span><span class="value">' + s.stats.normalCount + '笔</span></div>' +
+        (s.stats.voidCount > 0 ? '<div class="shift-stat"><span class="label">作废</span><span class="value" style="color:var(--danger)">' + s.stats.voidCount + '笔</span></div>' : '') +
+        (s.stats.refundCount > 0 ? '<div class="shift-stat"><span class="label">退款</span><span class="value" style="color:var(--warning)">' + s.stats.refundCount + '笔</span></div>' : '') +
+        '<div class="shift-stat"><span class="label">应交</span><span class="value">¥' + s.stats.net.toFixed(2) + '</span></div>' +
+      '</div>' +
+    '</div>';
+  }).join('');
+}
+
+function viewShiftDetail(idx) {
+  state.currentShiftViewIdx = idx;
+  var shift = state.shifts[idx];
+  var html = shift.summaryHtml;
+
+  var shiftRecords = state.records.filter(function(r) {
+    return shift.recordIds.indexOf(r.id) >= 0;
+  });
+
+  html += '<hr class="receipt-divider">';
+  html += '<div class="shift-section">包含收费记录（' + shiftRecords.length + '条）</div>';
+  html += '<div style="max-height:300px;overflow-y:auto;margin-top:8px">';
+  html += '<table style="width:100%;border-collapse:collapse;font-size:12px">';
+  html += '<thead><tr style="border-bottom:2px solid var(--border)"><th style="text-align:left;padding:6px 8px;color:var(--text-secondary)">流水号</th><th style="text-align:left;padding:6px 8px;color:var(--text-secondary)">患者</th><th style="text-align:left;padding:6px 8px;color:var(--text-secondary)">金额</th><th style="text-align:left;padding:6px 8px;color:var(--text-secondary)">状态</th></tr></thead><tbody>';
+
+  var statusNames = { normal: '正常', voided: '已作废', refunded: '已退款' };
+  var statusBadges = { normal: 'badge-success', voided: 'badge-danger', refunded: 'badge-warning' };
+  shiftRecords.forEach(function(r) {
+    html += '<tr style="border-bottom:1px solid var(--border)">' +
+      '<td style="padding:6px 8px">' + r.id + '</td>' +
+      '<td style="padding:6px 8px">' + r.patient + '</td>' +
+      '<td style="padding:6px 8px;font-weight:600">¥' + r.total.toFixed(2) + '</td>' +
+      '<td style="padding:6px 8px"><span class="badge ' + statusBadges[r.status] + '">' + statusNames[r.status] + '</span></td>' +
+    '</tr>';
+  });
+  html += '</tbody></table></div>';
+
+  document.getElementById('shiftDetailContent').innerHTML = html;
+  openModal('shiftDetailModal');
+}
+
+function exportShiftRecords() {
+  var idx = state.currentShiftViewIdx;
+  if (idx < 0) return;
+  var shift = state.shifts[idx];
+  var shiftRecords = state.records.filter(function(r) {
+    return shift.recordIds.indexOf(r.id) >= 0;
+  });
+  if (shiftRecords.length === 0) { showToast('无记录可导出', 'warning'); return; }
+
+  var methodNames = { cash: '现金', scan: '扫码', insurance: '医保' };
+  var statusNames = { normal: '正常', voided: '已作废', refunded: '已退款' };
+
+  var headers = ['交班单号', '收款员', '班次', '流水号', '患者姓名', '手机号', '套餐', '加项', '总金额', '支付方式', '状态', '作废/退款原因', '收费时间'];
+  var rows = shiftRecords.map(function(r) {
+    var addons = r.addons.map(function(a) { return a.name; }).join('+');
+    var reason = '';
+    if (r.statusHistory) r.statusHistory.forEach(function(h) { if (h.status !== 'normal') reason += (reason ? '；' : '') + h.reason; });
+    return [shift.id, shift.cashier, shift.period, r.id, r.patient, r.patientPhone, r.packageName, addons || '', r.total.toFixed(2), methodNames[r.payMethod] || r.payMethod, statusNames[r.status] || r.status, reason, r.time];
+  });
+
+  var BOM = '\uFEFF';
+  var csvContent = BOM + headers.map(function(h) { return '"' + h + '"'; }).join(',') + '\n';
+  rows.forEach(function(row) {
+    csvContent += row.map(function(cell) { return '"' + String(cell).replace(/"/g, '""') + '"'; }).join(',') + '\n';
+  });
+
+  var blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  var url = URL.createObjectURL(blob);
+  var link = document.createElement('a');
+  link.href = url;
+  link.download = '交班流水_' + shift.id + '.csv';
+  link.click();
+  URL.revokeObjectURL(url);
+  showToast('已导出' + shiftRecords.length + '条记录', 'success');
 }
 
 function openModal(id) {
