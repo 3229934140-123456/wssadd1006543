@@ -239,6 +239,42 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hira
 
 .recon-panel .recon-actions{margin-top:12px;display:flex;justify-content:flex-end;gap:8px}
 
+.shift-actual-section{background:var(--primary-light);border-radius:8px;padding:14px;margin-top:14px}
+.shift-actual-section .section-label{font-weight:700;font-size:13px;color:var(--primary);margin-bottom:10px}
+.shift-actual-row{display:flex;gap:10px;align-items:center;margin-bottom:8px}
+.shift-actual-row label{min-width:70px;font-size:12px;font-weight:600;color:var(--text-secondary)}
+.shift-actual-row input{flex:1;padding:6px 10px;border:2px solid var(--border);border-radius:6px;font-size:13px;outline:none;text-align:right}
+.shift-actual-row input:focus{border-color:var(--primary)}
+.shift-actual-row .unit{font-size:12px;color:var(--text-secondary);min-width:20px}
+.shift-variance{margin-top:8px;padding:10px;border-radius:6px;font-size:13px}
+.shift-variance.ok{background:var(--success-light);color:var(--success)}
+.shift-variance.diff{background:var(--warning-light);color:var(--warning)}
+.shift-variance .diff-amount{font-weight:700;font-size:16px}
+
+.monthly-panel{background:var(--card);border-radius:var(--radius);padding:18px 20px;margin-bottom:16px;box-shadow:var(--shadow)}
+.monthly-panel-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}
+.monthly-panel-header h3{font-size:15px;font-weight:700;display:flex;align-items:center;gap:8px}
+.monthly-panel-header h3::before{content:"";display:inline-block;width:4px;height:16px;background:var(--primary);border-radius:2px}
+.monthly-summary-row{display:flex;gap:12px;margin-bottom:14px;flex-wrap:wrap}
+.monthly-summary-card{flex:1;min-width:140px;padding:12px;border-radius:8px;background:var(--bg);text-align:center}
+.monthly-summary-card .ms-label{font-size:11px;color:var(--text-secondary)}
+.monthly-summary-card .ms-value{font-size:20px;font-weight:700;color:var(--text);margin-top:2px}
+.monthly-summary-card .ms-value.danger{color:var(--danger)}
+.monthly-summary-card .ms-value.success{color:var(--success)}
+.daily-row{display:flex;align-items:center;padding:10px 0;border-bottom:1px solid var(--border);cursor:pointer;transition:background .2s;gap:12px}
+.daily-row:hover{background:var(--primary-light)}
+.daily-row:last-child{border-bottom:none}
+.daily-date{min-width:100px;font-weight:600;font-size:13px}
+.daily-amount{min-width:90px;font-weight:700;color:var(--danger);font-size:13px}
+.daily-actual{min-width:90px;font-size:13px;color:var(--success)}
+.daily-variance{min-width:70px;font-size:13px;font-weight:600}
+.daily-variance.ok{color:var(--success)}
+.daily-variance.diff{color:var(--warning)}
+.daily-cashier{min-width:60px;font-size:12px;color:var(--text-secondary)}
+.daily-anomaly{font-size:12px}
+.daily-shifts{min-width:60px;font-size:12px;color:var(--text-secondary)}
+.recon-locked-banner{background:var(--success-light);border-left:4px solid var(--success);padding:10px 14px;border-radius:6px;margin-bottom:10px;font-size:13px;color:var(--success);display:flex;align-items:center;gap:8px}
+
 @media(max-width:640px){
   .package-grid{grid-template-columns:1fr}
   .payment-methods{flex-direction:column}
@@ -259,6 +295,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hira
     <button class="active" onclick="switchPage('cashier')">套餐收银</button>
     <button onclick="switchPage('records')">收费记录</button>
     <button onclick="switchPage('shifts')">交班记录</button>
+    <button onclick="switchPage('finance')">财务核账</button>
   </nav>
 </header>
 
@@ -367,6 +404,35 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hira
   <div class="empty-state" id="emptyShifts">
     <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6"/><path d="M12 18v-6"/><path d="m9 15 3-3 3 3"/></svg>
     <p>暂无交班记录</p>
+  </div>
+</div>
+
+<div id="page-finance" class="page">
+  <div class="section-title">财务核账</div>
+  <div class="monthly-panel">
+    <div class="monthly-panel-header">
+      <h3>月度汇总</h3>
+      <div style="display:flex;gap:8px;align-items:center">
+        <label style="font-size:13px;color:var(--text-secondary);font-weight:600">月份</label>
+        <input type="month" id="financeMonth" oninput="renderFinance()" style="padding:6px 10px;border:2px solid var(--border);border-radius:6px;font-size:13px;outline:none">
+      </div>
+    </div>
+    <div class="monthly-summary-row" id="monthlySummary"></div>
+  </div>
+  <div style="background:var(--card);border-radius:var(--radius);padding:16px 20px;box-shadow:var(--shadow)">
+    <div style="display:flex;padding:8px 0;border-bottom:2px solid var(--border);font-size:12px;font-weight:600;color:var(--text-secondary)">
+      <span class="daily-date">日期</span>
+      <span class="daily-amount">应交金额</span>
+      <span class="daily-actual">实收金额</span>
+      <span class="daily-variance">差额</span>
+      <span class="daily-cashier">收款员</span>
+      <span class="daily-anomaly">异常</span>
+      <span class="daily-shifts">交班单</span>
+    </div>
+    <div id="dailyList"></div>
+  </div>
+  <div class="empty-state" id="emptyFinance" style="display:none">
+    <p>当月无交班记录</p>
   </div>
 </div>
 
@@ -538,7 +604,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hira
 </div>
 
 <div class="modal-overlay" id="shiftModal">
-  <div class="modal">
+  <div class="modal" style="width:560px">
     <div class="modal-header">
       <h3>生成交班单</h3>
       <button class="modal-close" onclick="closeModal('shiftModal')">&times;</button>
@@ -560,6 +626,31 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hira
       <div class="form-group">
         <label>交班汇总预览</label>
         <div id="shiftPreview" class="shift-summary"></div>
+      </div>
+      <div class="shift-actual-section" id="shiftActualSection">
+        <div class="section-label">📋 实收录入（按实际到账填写）</div>
+        <div class="shift-actual-row">
+          <label>现金实点</label>
+          <input type="number" id="actualCash" placeholder="0.00" step="0.01" oninput="calcVariance()">
+          <span class="unit">元</span>
+        </div>
+        <div class="shift-actual-row">
+          <label>扫码到账</label>
+          <input type="number" id="actualScan" placeholder="0.00" step="0.01" oninput="calcVariance()">
+          <span class="unit">元</span>
+        </div>
+        <div class="shift-actual-row">
+          <label>医保结算</label>
+          <input type="number" id="actualInsurance" placeholder="0.00" step="0.01" oninput="calcVariance()">
+          <span class="unit">元</span>
+        </div>
+        <div class="shift-variance ok" id="shiftVariance">
+          差额：¥0.00（账实相符）
+        </div>
+        <div class="form-group" id="varianceReasonGroup" style="display:none;margin-top:10px">
+          <label>差异说明</label>
+          <input type="text" id="varianceReason" placeholder="请说明差额原因...">
+        </div>
       </div>
     </div>
     <div class="modal-footer">
@@ -690,6 +781,7 @@ function switchPage(page) {
   event.target.classList.add('active');
   if (page === 'records') renderRecords();
   if (page === 'shifts') renderShifts();
+  if (page === 'finance') renderFinance();
 }
 
 document.addEventListener('click', function(e) {
@@ -1375,6 +1467,24 @@ function renderReconPanel(filtered) {
 
   var reconRecords = getReconDateRecords();
 
+  var existingShifts = state.shifts.filter(function(s) { return s.date === targetDate; });
+  var actionsEl = document.querySelector('.recon-actions');
+  if (existingShifts.length > 0) {
+    var shiftInfo = existingShifts.map(function(s) { return s.id + '(' + s.period + '/' + s.cashier + ')'; }).join('、');
+    if (!document.getElementById('reconLockedBanner')) {
+      var banner = document.createElement('div');
+      banner.id = 'reconLockedBanner';
+      banner.className = 'recon-locked-banner';
+      actionsEl.parentNode.insertBefore(banner, actionsEl);
+    }
+    document.getElementById('reconLockedBanner').innerHTML = '🔒 本日已交班：' + shiftInfo;
+    actionsEl.style.display = 'none';
+  } else {
+    var bannerEl = document.getElementById('reconLockedBanner');
+    if (bannerEl) bannerEl.remove();
+    actionsEl.style.display = 'flex';
+  }
+
   var methods = ['cash', 'scan', 'insurance'];
   var methodLabels = { cash: '现金', scan: '扫码', insurance: '医保' };
   var methodClasses = { cash: 'cash', scan: 'scan', insurance: 'insurance' };
@@ -1587,23 +1697,80 @@ function renderShiftSummaryHtml(shiftData, cashier, period, dateStr) {
 function openShiftModal() {
   var reconRecords = getReconDateRecords();
   if (reconRecords.length === 0) { showToast('当天无收费记录，无法生成交班单', 'warning'); return; }
-  document.getElementById('shiftCashier').value = '';
-  var hour = new Date().getHours();
-  var periodEl = document.getElementById('shiftPeriod');
-  if (hour < 12) periodEl.value = '早班';
-  else if (hour < 18) periodEl.value = '午班';
-  else periodEl.value = '晚班';
 
-  var shiftData = buildShiftStats(reconRecords);
   var targetDate = currentFilters.date;
   if (!targetDate) {
     var today = new Date();
     targetDate = today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0') + '-' + String(today.getDate()).padStart(2, '0');
   }
+  var periodEl = document.getElementById('shiftPeriod');
+  var hour = new Date().getHours();
+  if (hour < 12) periodEl.value = '早班';
+  else if (hour < 18) periodEl.value = '午班';
+  else periodEl.value = '晚班';
+
+  var existing = state.shifts.find(function(s) { return s.date === targetDate && s.period === periodEl.value; });
+  if (existing) {
+    showToast('该日期班次已有交班单：' + existing.id + '（收款员：' + existing.cashier + '）', 'warning');
+    return;
+  }
+
+  document.getElementById('shiftCashier').value = '';
+  document.getElementById('actualCash').value = '';
+  document.getElementById('actualScan').value = '';
+  document.getElementById('actualInsurance').value = '';
+  document.getElementById('varianceReason').value = '';
+  document.getElementById('varianceReasonGroup').style.display = 'none';
+  var varianceEl = document.getElementById('shiftVariance');
+  varianceEl.className = 'shift-variance ok';
+  varianceEl.innerHTML = '差额：¥0.00（账实相符）';
+
+  var shiftData = buildShiftStats(reconRecords);
   state._pendingShiftData = shiftData;
   state._pendingShiftDate = targetDate;
   document.getElementById('shiftPreview').innerHTML = renderShiftSummaryHtml(shiftData, '（待填写）', periodEl.value, targetDate);
+
+  document.getElementById('actualCash').value = shiftData.stats.cash ? shiftData.stats.cash.total.toFixed(2) : '0.00';
+  document.getElementById('actualScan').value = shiftData.stats.scan ? shiftData.stats.scan.total.toFixed(2) : '0.00';
+  document.getElementById('actualInsurance').value = shiftData.stats.insurance ? shiftData.stats.insurance.total.toFixed(2) : '0.00';
+  calcVariance();
+
   openModal('shiftModal');
+}
+
+function calcVariance() {
+  var shiftData = state._pendingShiftData;
+  if (!shiftData) return;
+  var expectedCash = shiftData.stats.cash ? shiftData.stats.cash.total : 0;
+  var expectedScan = shiftData.stats.scan ? shiftData.stats.scan.total : 0;
+  var expectedInsurance = shiftData.stats.insurance ? shiftData.stats.insurance.total : 0;
+
+  var actualCash = parseFloat(document.getElementById('actualCash').value) || 0;
+  var actualScan = parseFloat(document.getElementById('actualScan').value) || 0;
+  var actualInsurance = parseFloat(document.getElementById('actualInsurance').value) || 0;
+
+  var diffCash = actualCash - expectedCash;
+  var diffScan = actualScan - expectedScan;
+  var diffInsurance = actualInsurance - expectedInsurance;
+  var totalDiff = diffCash + diffScan + diffInsurance;
+
+  var varianceEl = document.getElementById('shiftVariance');
+  var reasonGroup = document.getElementById('varianceReasonGroup');
+
+  if (Math.abs(totalDiff) < 0.01) {
+    varianceEl.className = 'shift-variance ok';
+    varianceEl.innerHTML = '差额：¥0.00（账实相符）';
+    reasonGroup.style.display = 'none';
+  } else {
+    varianceEl.className = 'shift-variance diff';
+    var sign = totalDiff > 0 ? '+' : '';
+    var detail = '';
+    if (Math.abs(diffCash) >= 0.01) detail += ' 现金' + (diffCash > 0 ? '+' : '') + diffCash.toFixed(2);
+    if (Math.abs(diffScan) >= 0.01) detail += ' 扫码' + (diffScan > 0 ? '+' : '') + diffScan.toFixed(2);
+    if (Math.abs(diffInsurance) >= 0.01) detail += ' 医保' + (diffInsurance > 0 ? '+' : '') + diffInsurance.toFixed(2);
+    varianceEl.innerHTML = '差额：<span class="diff-amount">¥' + sign + totalDiff.toFixed(2) + '</span>' + detail;
+    reasonGroup.style.display = 'block';
+  }
 }
 
 function confirmShift() {
@@ -1613,6 +1780,24 @@ function confirmShift() {
   var shiftData = state._pendingShiftData;
   var dateStr = state._pendingShiftDate;
 
+  var existing = state.shifts.find(function(s) { return s.date === dateStr && s.period === period; });
+  if (existing) {
+    showToast('该日期班次已有交班单：' + existing.id + '，不可重复交班', 'warning');
+    return;
+  }
+
+  var actualCash = parseFloat(document.getElementById('actualCash').value) || 0;
+  var actualScan = parseFloat(document.getElementById('actualScan').value) || 0;
+  var actualInsurance = parseFloat(document.getElementById('actualInsurance').value) || 0;
+  var totalActual = actualCash + actualScan + actualInsurance;
+  var totalDiff = totalActual - shiftData.net;
+  var varianceReason = document.getElementById('varianceReason').value.trim();
+
+  if (Math.abs(totalDiff) >= 0.01 && !varianceReason) {
+    showToast('存在差额，请填写差异说明', 'warning');
+    return;
+  }
+
   var now = new Date();
   var shift = {
     id: 'JB' + now.getFullYear() + String(now.getMonth() + 1).padStart(2, '0') + String(now.getDate()).padStart(2, '0') + String(Math.floor(Math.random() * 9000) + 1000),
@@ -1620,6 +1805,7 @@ function confirmShift() {
     period: period,
     date: dateStr,
     createdAt: now.toLocaleString('zh-CN'),
+    locked: true,
     stats: {
       totalNormal: shiftData.totalNormal,
       totalVoid: shiftData.totalVoid,
@@ -1630,6 +1816,14 @@ function confirmShift() {
       refundCount: shiftData.refundCount
     },
     methodStats: {},
+    actual: {
+      cash: actualCash,
+      scan: actualScan,
+      insurance: actualInsurance,
+      total: totalActual,
+      diff: totalDiff,
+      diffReason: varianceReason
+    },
     voidDetails: shiftData.voidDetails,
     refundDetails: shiftData.refundDetails,
     recordIds: shiftData.recordIds,
@@ -1643,7 +1837,7 @@ function confirmShift() {
   state.shifts.unshift(shift);
   localStorage.setItem('dental_shifts', JSON.stringify(state.shifts));
   closeModal('shiftModal');
-  showToast('交班单已生成：' + shift.id, 'success');
+  showToast('交班单已生成并锁定：' + shift.id, 'success');
 }
 
 function renderShifts() {
@@ -1656,18 +1850,22 @@ function renderShifts() {
   }
   empty.style.display = 'none';
   list.innerHTML = state.shifts.map(function(s, idx) {
+    var varianceHtml = '';
+    if (s.actual && Math.abs(s.actual.diff) >= 0.01) {
+      var sign = s.actual.diff > 0 ? '+' : '';
+      varianceHtml = '<div class="shift-stat"><span class="label">差额</span><span class="value" style="color:var(--warning)">' + sign + '¥' + s.actual.diff.toFixed(2) + '</span></div>';
+    }
     return '<div class="shift-card" onclick="viewShiftDetail(' + idx + ')">' +
       '<div class="shift-card-header">' +
-        '<span class="shift-id">' + s.id + '</span>' +
+        '<span class="shift-id">' + s.id + (s.locked ? ' 🔒' : '') + '</span>' +
         '<span class="shift-time">' + s.createdAt + '</span>' +
       '</div>' +
       '<div class="shift-card-body">' +
         '<div class="shift-stat"><span class="label">收款员</span><span class="value" style="color:var(--text)">' + s.cashier + '</span></div>' +
         '<div class="shift-stat"><span class="label">班次</span><span class="value" style="color:var(--text)">' + s.period + '</span></div>' +
-        '<div class="shift-stat"><span class="label">正常</span><span class="value">' + s.stats.normalCount + '笔</span></div>' +
-        (s.stats.voidCount > 0 ? '<div class="shift-stat"><span class="label">作废</span><span class="value" style="color:var(--danger)">' + s.stats.voidCount + '笔</span></div>' : '') +
-        (s.stats.refundCount > 0 ? '<div class="shift-stat"><span class="label">退款</span><span class="value" style="color:var(--warning)">' + s.stats.refundCount + '笔</span></div>' : '') +
         '<div class="shift-stat"><span class="label">应交</span><span class="value">¥' + s.stats.net.toFixed(2) + '</span></div>' +
+        (s.actual ? '<div class="shift-stat"><span class="label">实收</span><span class="value" style="color:var(--success)">¥' + s.actual.total.toFixed(2) + '</span></div>' : '') +
+        varianceHtml +
       '</div>' +
     '</div>';
   }).join('');
@@ -1677,6 +1875,24 @@ function viewShiftDetail(idx) {
   state.currentShiftViewIdx = idx;
   var shift = state.shifts[idx];
   var html = shift.summaryHtml;
+
+  if (shift.actual) {
+    html += '<hr class="receipt-divider">';
+    html += '<div class="shift-section">实收录入</div>';
+    html += '<div class="shift-row"><span>现金实点</span><span>¥' + shift.actual.cash.toFixed(2) + '</span></div>';
+    html += '<div class="shift-row"><span>扫码到账</span><span>¥' + shift.actual.scan.toFixed(2) + '</span></div>';
+    html += '<div class="shift-row"><span>医保结算</span><span>¥' + shift.actual.insurance.toFixed(2) + '</span></div>';
+    html += '<div class="shift-row" style="font-weight:700"><span>实收合计</span><span>¥' + shift.actual.total.toFixed(2) + '</span></div>';
+    var diffSign = shift.actual.diff > 0 ? '+' : '';
+    if (Math.abs(shift.actual.diff) < 0.01) {
+      html += '<div class="shift-row" style="color:var(--success)"><span>差额</span><span>¥0.00（账实相符）</span></div>';
+    } else {
+      html += '<div class="shift-row" style="color:var(--warning)"><span>差额</span><span>' + diffSign + '¥' + shift.actual.diff.toFixed(2) + '</span></div>';
+      if (shift.actual.diffReason) {
+        html += '<div class="shift-row" style="color:var(--text-secondary)"><span>差异说明</span><span>' + shift.actual.diffReason + '</span></div>';
+      }
+    }
+  }
 
   var shiftRecords = state.records.filter(function(r) {
     return shift.recordIds.indexOf(r.id) >= 0;
@@ -1738,6 +1954,101 @@ function exportShiftRecords() {
   link.click();
   URL.revokeObjectURL(url);
   showToast('已导出' + shiftRecords.length + '条记录', 'success');
+}
+
+function renderFinance() {
+  var monthInput = document.getElementById('financeMonth');
+  if (!monthInput.value) {
+    var now = new Date();
+    monthInput.value = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0');
+  }
+  var monthStr = monthInput.value;
+  var monthShifts = state.shifts.filter(function(s) {
+    return s.date && s.date.indexOf(monthStr) === 0;
+  });
+
+  var summaryEl = document.getElementById('monthlySummary');
+  var dailyEl = document.getElementById('dailyList');
+  var emptyEl = document.getElementById('emptyFinance');
+
+  if (monthShifts.length === 0) {
+    summaryEl.innerHTML = '';
+    dailyEl.innerHTML = '';
+    emptyEl.style.display = 'block';
+    return;
+  }
+  emptyEl.style.display = 'none';
+
+  var totalNet = 0, totalActual = 0, totalDiff = 0, totalAnomaly = 0;
+  monthShifts.forEach(function(s) {
+    totalNet += s.stats.net;
+    totalActual += (s.actual ? s.actual.total : s.stats.net);
+    totalDiff += (s.actual ? Math.abs(s.actual.diff) : 0);
+    totalAnomaly += s.stats.voidCount + s.stats.refundCount;
+  });
+
+  summaryEl.innerHTML =
+    '<div class="monthly-summary-card"><div class="ms-label">交班天数</div><div class="ms-value">' + monthShifts.length + '</div></div>' +
+    '<div class="monthly-summary-card"><div class="ms-label">应交总额</div><div class="ms-value danger">¥' + totalNet.toFixed(2) + '</div></div>' +
+    '<div class="monthly-summary-card"><div class="ms-label">实收总额</div><div class="ms-value success">¥' + totalActual.toFixed(2) + '</div></div>' +
+    '<div class="monthly-summary-card"><div class="ms-label">累计差额</div><div class="ms-value" style="color:' + (totalDiff >= 0.01 ? 'var(--warning)' : 'var(--success)') + '">¥' + totalDiff.toFixed(2) + '</div></div>' +
+    '<div class="monthly-summary-card"><div class="ms-label">异常笔数</div><div class="ms-value" style="color:' + (totalAnomaly > 0 ? 'var(--danger)' : 'var(--success)') + '">' + totalAnomaly + '</div></div>';
+
+  var byDate = {};
+  monthShifts.forEach(function(s) {
+    if (!byDate[s.date]) byDate[s.date] = [];
+    byDate[s.date].push(s);
+  });
+
+  var dailyHtml = '';
+  Object.keys(byDate).sort().reverse().forEach(function(date) {
+    var dayShifts = byDate[date];
+    var dayNet = 0, dayActual = 0, dayDiff = 0, dayAnomaly = 0, cashiers = [];
+    dayShifts.forEach(function(s) {
+      dayNet += s.stats.net;
+      dayActual += (s.actual ? s.actual.total : s.stats.net);
+      dayDiff += (s.actual ? s.actual.diff : 0);
+      dayAnomaly += s.stats.voidCount + s.stats.refundCount;
+      if (cashiers.indexOf(s.cashier) < 0) cashiers.push(s.cashier);
+    });
+    var diffClass = Math.abs(dayDiff) < 0.01 ? 'ok' : 'diff';
+    var diffText = Math.abs(dayDiff) < 0.01 ? '¥0.00' : (dayDiff > 0 ? '+' : '') + '¥' + dayDiff.toFixed(2);
+    var dateParts = date.split('-');
+    var dateDisplay = dateParts[1] + '/' + dateParts[2];
+    var shiftIds = dayShifts.map(function(s) { return s.id; }).join('、');
+
+    dailyHtml += '<div class="daily-row" onclick="viewFinanceDay(\'' + date + '\')">' +
+      '<span class="daily-date">' + dateDisplay + '</span>' +
+      '<span class="daily-amount">¥' + dayNet.toFixed(2) + '</span>' +
+      '<span class="daily-actual">¥' + dayActual.toFixed(2) + '</span>' +
+      '<span class="daily-variance ' + diffClass + '">' + diffText + '</span>' +
+      '<span class="daily-cashier">' + cashiers.join('、') + '</span>' +
+      '<span class="daily-anomaly">' + (dayAnomaly > 0 ? '<span class="badge badge-danger">' + dayAnomaly + '笔</span>' : '<span class="badge badge-success">0</span>') + '</span>' +
+      '<span class="daily-shifts">' + dayShifts.length + '张</span>' +
+    '</div>';
+  });
+  dailyEl.innerHTML = dailyHtml;
+}
+
+function viewFinanceDay(date) {
+  var dayShifts = state.shifts.filter(function(s) { return s.date === date; });
+  if (dayShifts.length === 0) return;
+
+  var html = '<div style="font-size:16px;font-weight:700;margin-bottom:12px">' + date + ' 交班明细</div>';
+  dayShifts.forEach(function(s) {
+    var sIdx = state.shifts.indexOf(s);
+    html += '<div style="background:var(--bg);border-radius:8px;padding:12px;margin-bottom:10px;cursor:pointer" onclick="closeModal(\'shiftDetailModal\');setTimeout(function(){viewShiftDetail(' + sIdx + ')},300)">';
+    html += '<div style="display:flex;justify-content:space-between;margin-bottom:6px"><span style="font-weight:700">' + s.id + ' 🔒</span><span style="font-size:12px;color:var(--text-secondary)">' + s.period + ' · ' + s.cashier + '</span></div>';
+    html += '<div style="display:flex;gap:16px;font-size:13px">';
+    html += '<span>应交 ¥' + s.stats.net.toFixed(2) + '</span>';
+    if (s.actual) html += '<span style="color:var(--success)">实收 ¥' + s.actual.total.toFixed(2) + '</span>';
+    if (s.actual && Math.abs(s.actual.diff) >= 0.01) html += '<span style="color:var(--warning)">差额 ' + (s.actual.diff > 0 ? '+' : '') + '¥' + s.actual.diff.toFixed(2) + '</span>';
+    if (s.stats.voidCount + s.stats.refundCount > 0) html += '<span style="color:var(--danger)">异常' + (s.stats.voidCount + s.stats.refundCount) + '笔</span>';
+    html += '</div></div>';
+  });
+
+  document.getElementById('shiftDetailContent').innerHTML = html;
+  openModal('shiftDetailModal');
 }
 
 function openModal(id) {
